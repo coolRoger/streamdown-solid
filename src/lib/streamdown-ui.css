@@ -1,0 +1,837 @@
+.sd-link-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in oklab, var(--background) 50%, transparent);
+    backdrop-filter: blur(4px);
+}
+
+.sd-link-modal-panel {
+    position: relative;
+    margin: 0 1rem;
+    width: 100%;
+    max-width: 32rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: var(--background);
+    padding: 1.5rem;
+    box-shadow: 0 12px 24px color-mix(in oklab, black 10%, transparent);
+}
+
+.sd-link-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    border: 0;
+    border-radius: 0.375rem;
+    padding: 0.25rem;
+    color: var(--muted-foreground);
+    background: transparent;
+    transition:
+        background-color 150ms ease,
+        color 150ms ease;
+}
+
+.sd-link-modal-close:hover {
+    background: var(--muted);
+    color: var(--foreground);
+}
+
+.sd-link-modal-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sd-link-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.sd-link-modal-description {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+}
+
+.sd-link-modal-url {
+    word-break: break-all;
+    border-radius: 0.375rem;
+    background: var(--muted);
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.875rem;
+    padding: 0.75rem;
+}
+
+.sd-link-modal-url[data-scrollable="true"] {
+    max-height: 8rem;
+    overflow-y: auto;
+}
+
+.sd-link-modal-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sd-link-modal-copy,
+.sd-link-modal-confirm {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 150ms ease;
+}
+
+.sd-link-modal-copy {
+    border: 1px solid var(--border);
+    background: var(--background);
+}
+
+.sd-link-modal-copy:hover {
+    background: var(--muted);
+}
+
+.sd-link-modal-confirm {
+    border: 1px solid transparent;
+    color: var(--primary-foreground);
+    background: var(--primary);
+}
+
+.sd-link-modal-confirm:hover {
+    background: color-mix(in oklab, var(--primary) 90%, black);
+}
+
+.sd-image-wrapper {
+    position: relative;
+    display: inline-block;
+    margin: 1rem 0;
+}
+
+.sd-image {
+    max-width: 100%;
+    border-radius: 0.5rem;
+}
+
+.sd-image--hidden {
+    display: none;
+}
+
+.sd-image-fallback {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--muted-foreground);
+}
+
+.sd-image-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    border-radius: 0.5rem;
+    background: color-mix(in oklab, black 10%, transparent);
+    pointer-events: none;
+}
+
+.sd-image-wrapper:hover .sd-image-overlay {
+    display: block;
+}
+
+.sd-image-download {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border);
+    background: color-mix(in oklab, var(--background) 90%, transparent);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 4px color-mix(in oklab, black 10%, transparent);
+    transition:
+        opacity 200ms ease,
+        background-color 200ms ease;
+    opacity: 0;
+}
+
+.sd-image-wrapper:hover .sd-image-download {
+    opacity: 1;
+}
+
+.sd-image-download:hover {
+    background: var(--background);
+}
+
+.sd-codeblock-container {
+    margin: 1rem 0;
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+    background: var(--sidebar);
+    padding: 0.5rem;
+}
+
+.sd-codeblock-header {
+    display: flex;
+    height: 2rem;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+}
+
+.sd-codeblock-language {
+    margin-left: 0.25rem;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    text-transform: lowercase;
+}
+
+.sd-codeblock-skeleton {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.sd-codeblock-skeleton-header {
+    width: 100%;
+    height: 2.875rem;
+    background: color-mix(in oklab, var(--muted) 80%, transparent);
+}
+
+.sd-codeblock-skeleton-body {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.sd-codeblock-skeleton-spinner {
+    width: 1rem;
+    height: 1rem;
+    animation: sd-spin 1s linear infinite;
+}
+
+@keyframes sd-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.sd-dropdown-root {
+    position: relative;
+}
+
+.sd-icon-button,
+.sd-table-icon-button {
+    cursor: pointer;
+    border: 0;
+    padding: 0.25rem;
+    color: var(--muted-foreground);
+    background: transparent;
+    transition:
+        color 150ms ease,
+        background-color 150ms ease;
+}
+
+.sd-icon-button:hover,
+.sd-table-icon-button:hover {
+    color: var(--foreground);
+}
+
+.sd-icon-button:disabled,
+.sd-table-icon-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sd-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    right: 0;
+    z-index: 20;
+    min-width: 7.5rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: var(--background);
+    box-shadow: 0 8px 20px color-mix(in oklab, black 12%, transparent);
+}
+
+.sd-dropdown-item {
+    width: 100%;
+    border: 0;
+    text-align: left;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    transition: background-color 150ms ease;
+}
+
+.sd-dropdown-item:hover {
+    background: color-mix(in oklab, var(--muted) 40%, transparent);
+}
+
+.sd-table-wrapper {
+    margin: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--sidebar);
+    padding: 0.5rem;
+}
+
+.sd-table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+}
+
+.sd-table-scroller {
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: var(--background);
+}
+
+.sd-table-element {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sd-table-fullscreen-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    background: var(--background);
+}
+
+.sd-table-fullscreen-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.sd-table-fullscreen-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    padding: 1rem;
+}
+
+.sd-table-fullscreen-scroll {
+    flex: 1;
+    overflow: auto;
+    padding: 1rem;
+    padding-top: 0;
+}
+
+.sd-table-fullscreen-scroll thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.sd-table-fullscreen-element {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+}
+
+.sd-md-ol,
+.sd-md-ul {
+    white-space: normal;
+    list-style-position: inside;
+}
+
+.sd-md-ol {
+    list-style-type: decimal;
+}
+
+.sd-md-ul {
+    list-style-type: disc;
+}
+
+.sd-md-ol li,
+.sd-md-ul li {
+    padding-left: 1.5rem;
+}
+
+.sd-md-li {
+    padding: 0.25rem 0;
+}
+
+.sd-md-li > p {
+    display: inline;
+}
+
+.sd-md-hr {
+    margin: 1.5rem 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+}
+
+.sd-md-strong {
+    font-weight: 600;
+}
+
+.sd-md-link,
+.sd-md-link-button {
+    overflow-wrap: anywhere;
+    font-weight: 500;
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+.sd-md-link-button {
+    border: 0;
+    background: transparent;
+    text-align: left;
+    padding: 0;
+}
+
+.sd-md-h1,
+.sd-md-h2,
+.sd-md-h3,
+.sd-md-h4,
+.sd-md-h5,
+.sd-md-h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.sd-md-h1 {
+    font-size: 1.875rem;
+}
+.sd-md-h2 {
+    font-size: 1.5rem;
+}
+.sd-md-h3 {
+    font-size: 1.25rem;
+}
+.sd-md-h4 {
+    font-size: 1.125rem;
+}
+.sd-md-h5 {
+    font-size: 1rem;
+}
+.sd-md-h6 {
+    font-size: 0.875rem;
+}
+
+.sd-md-thead {
+    background: color-mix(in oklab, var(--muted) 80%, transparent);
+}
+
+.sd-md-tbody > tr + tr {
+    border-top: 1px solid var(--border);
+}
+
+.sd-md-tr {
+    border-color: var(--border);
+}
+
+.sd-md-th {
+    white-space: nowrap;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+}
+
+.sd-md-td {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+}
+
+.sd-md-blockquote {
+    margin: 1rem 0;
+    padding-left: 1rem;
+    border-left: 4px solid
+        color-mix(in oklab, var(--muted-foreground) 30%, transparent);
+    color: var(--muted-foreground);
+    font-style: italic;
+}
+
+.sd-md-sup,
+.sd-md-sub {
+    font-size: 0.875rem;
+}
+
+.sd-md-inline-code {
+    border-radius: 0.25rem;
+    background: var(--muted);
+    padding: 0.125rem 0.375rem;
+    font-size: 0.875rem;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.sd-mermaid-block {
+    position: relative;
+    margin: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+    background: var(--sidebar);
+    padding: 0.5rem;
+}
+
+.sd-mermaid-block-header {
+    display: flex;
+    align-items: center;
+    height: 2rem;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+}
+
+.sd-mermaid-block-label {
+    margin-left: 0.25rem;
+    text-transform: lowercase;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.sd-mermaid-controls-wrap {
+    pointer-events: none;
+    position: sticky;
+    top: 0.5rem;
+    z-index: 10;
+    margin-top: -2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: 2rem;
+}
+
+.sd-mermaid-controls {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--sidebar);
+    border-radius: 0.375rem;
+    background: color-mix(in oklab, var(--sidebar) 80%, transparent);
+    padding: 0.25rem 0.375rem;
+}
+
+.sd-mermaid-content {
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: var(--background);
+}
+
+.sd-mermaid-placeholder {
+    margin: 1rem 0;
+    min-height: 200px;
+}
+
+.sd-mermaid-loading-wrap {
+    margin: 1rem 0;
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.sd-mermaid-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted-foreground);
+}
+
+.sd-mermaid-loading-spinner {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    border: 2px solid currentColor;
+    border-bottom-color: transparent;
+    animation: sd-spin 1s linear infinite;
+}
+
+.sd-mermaid-loading-text {
+    font-size: 0.875rem;
+}
+
+.sd-mermaid-error {
+    border-radius: 0.375rem;
+    background: #fef2f2;
+    padding: 1rem;
+}
+
+.sd-mermaid-error-text {
+    margin: 0;
+    color: #b91c1c;
+    font-size: 0.875rem;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.sd-mermaid-error-details {
+    margin-top: 0.5rem;
+}
+
+.sd-mermaid-error-summary {
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: #dc2626;
+}
+
+.sd-mermaid-error-code {
+    margin-top: 0.5rem;
+    overflow-x: auto;
+    border-radius: 0.25rem;
+    background: #fee2e2;
+    color: #991b1b;
+    font-size: 0.75rem;
+    padding: 0.5rem;
+}
+
+.sd-mermaid-root,
+.sd-mermaid-fullscreen-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.sd-mermaid-panzoom,
+.sd-mermaid-panzoom--fullscreen {
+    overflow: hidden;
+}
+
+.sd-mermaid-svg-wrap {
+    display: flex;
+    justify-content: center;
+}
+
+.sd-mermaid-svg-wrap--fullscreen {
+    width: 100%;
+    height: 100%;
+    align-items: center;
+}
+
+.sd-mermaid-fullscreen-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in oklab, var(--background) 95%, transparent);
+    backdrop-filter: blur(4px);
+}
+
+.sd-mermaid-fullscreen-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+    border: 0;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    color: var(--muted-foreground);
+    background: transparent;
+    transition:
+        color 150ms ease,
+        background-color 150ms ease;
+}
+
+.sd-mermaid-fullscreen-close:hover {
+    color: var(--foreground);
+    background: var(--muted);
+}
+
+.sd-mermaid-fullscreen-content {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.sd-mermaid-fullscreen-canvas svg {
+    width: auto;
+    height: auto;
+}
+
+.sd-codeblock-actions-wrap {
+    pointer-events: none;
+    position: sticky;
+    top: 0.5rem;
+    z-index: 10;
+    margin-top: -2.5rem;
+    display: flex;
+    height: 2rem;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.sd-codeblock-actions {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    border: 1px solid var(--sidebar);
+    border-radius: 0.375rem;
+    background: color-mix(in oklab, var(--sidebar) 80%, transparent);
+    padding: 0.25rem 0.375rem;
+}
+
+.sd-codeblock-body {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: var(--background);
+    padding: 1rem;
+    font-size: 0.875rem;
+}
+
+.sd-codeblock-pre {
+    background: var(--shiki-dark-bg, var(--sdm-bg, inherit));
+}
+
+.sd-code-lines {
+    counter-increment: line 0;
+    counter-reset: line;
+}
+
+.sd-code-line {
+    display: block;
+}
+
+.sd-code-line::before {
+    content: counter(line);
+    counter-increment: line;
+    display: inline-block;
+    width: 1.5rem;
+    margin-right: 1rem;
+    text-align: right;
+    font-size: 13px;
+    color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    user-select: none;
+}
+
+.sd-code-token {
+    color: var(--shiki-dark, var(--sdm-c, inherit));
+}
+
+.sd-code-token--bg {
+    background: var(--shiki-dark-bg, var(--sdm-tbg));
+}
+
+.sd-panzoom-root {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.sd-panzoom-root--normal {
+    width: 100%;
+    min-height: 7rem;
+}
+
+.sd-panzoom-root--fullscreen {
+    width: 100%;
+    height: 100%;
+}
+
+.sd-panzoom-controls {
+    position: absolute;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: color-mix(in oklab, var(--background) 80%, transparent);
+    padding: 0.25rem;
+}
+
+.sd-panzoom-controls--normal {
+    left: 0.5rem;
+    bottom: 0.5rem;
+}
+
+.sd-panzoom-controls--fullscreen {
+    left: 1rem;
+    bottom: 1rem;
+}
+
+.sd-panzoom-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0.25rem;
+    padding: 0.375rem;
+    color: var(--muted-foreground);
+    background: transparent;
+    transition:
+        color 150ms ease,
+        background-color 150ms ease;
+}
+
+.sd-panzoom-button:hover {
+    color: var(--foreground);
+    background: var(--muted);
+}
+
+.sd-panzoom-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sd-panzoom-content {
+    flex: 1;
+    transform-origin: center;
+    transition: transform 150ms ease-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sd-panzoom-content--normal {
+    width: 100%;
+}
+
+.sd-panzoom-content--fullscreen {
+    width: 100%;
+    height: 100%;
+}

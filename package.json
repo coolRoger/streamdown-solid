@@ -78,5 +78,13 @@
     "engines": {
         "node": ">=18",
         "pnpm": ">=9.0.0"
+    },
+    "dependencies": {
+        "@types/hast": "^3.0.4",
+        "mermaid": "^11.14.0",
+        "rehype": "^13.0.2",
+        "shiki": "^4.0.2",
+        "unified": "^11.0.5",
+        "unist-util-visit-parents": "^6.0.2"
     }
 }
