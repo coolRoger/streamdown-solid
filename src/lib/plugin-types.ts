@@ -1,10 +1,10 @@
 import type { MermaidConfig } from "mermaid";
-import type { Component } from "solid-js";
 import type {
     BundledLanguage,
     BundledTheme,
     ThemeRegistrationAny,
 } from "shiki";
+import type { Component } from "solid-js";
 import type { Pluggable } from "unified";
 
 export type ThemeInput = BundledTheme | ThemeRegistrationAny;

@@ -1,5 +1,5 @@
-import { createSignal, onCleanup, useContext } from "solid-js";
 import type { JSX } from "solid-js";
+import { createSignal, onCleanup, splitProps, useContext } from "solid-js";
 import { StreamdownContext } from "../../index";
 import { useIcons } from "../icon-context";
 import { useCn } from "../prefix-context";
@@ -11,29 +11,31 @@ export type CodeBlockCopyButtonProps =
         onCopy?: () => void;
         onError?: (error: Error) => void;
         timeout?: number;
-        className?: string;
+        class?: string;
     };
 
-export const CodeBlockCopyButton = ({
-    onCopy,
-    onError,
-    timeout = 2000,
-    children,
-    className,
-    code: propCode,
-    ...props
-}: CodeBlockCopyButtonProps & { code?: string }) => {
+export const CodeBlockCopyButton = (
+    props: CodeBlockCopyButtonProps & { code?: string },
+) => {
+    const [localProps, restProps] = splitProps(props, [
+        "onCopy",
+        "onError",
+        "timeout",
+        "children",
+        "class",
+        "code",
+    ]);
     const cn = useCn();
     const [isCopied, setIsCopied] = createSignal(false);
     let timeoutRef = 0;
     const { code: contextCode } = useCodeBlockContext();
     const { isAnimating } = useContext(StreamdownContext);
     const t = useTranslations();
-    const code = propCode ?? contextCode;
+    const code = localProps.code ?? contextCode;
 
     const copyToClipboard = async () => {
         if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {
-            onError?.(new Error("Clipboard API not available"));
+            localProps.onError?.(new Error("Clipboard API not available"));
             return;
         }
 
@@ -41,14 +43,14 @@ export const CodeBlockCopyButton = ({
             if (!isCopied()) {
                 await navigator.clipboard.writeText(code);
                 setIsCopied(true);
-                onCopy?.();
+                localProps.onCopy?.();
                 timeoutRef = window.setTimeout(
                     () => setIsCopied(false),
-                    timeout,
+                    localProps.timeout ?? 2000,
                 );
             }
         } catch (error) {
-            onError?.(error as Error);
+            localProps.onError?.(error as Error);
         }
     };
 
@@ -60,15 +62,15 @@ export const CodeBlockCopyButton = ({
 
     return (
         <button
-            class={cn("sd-icon-button", className)}
+            class={cn("sd-icon-button", localProps.class)}
             data-streamdown="code-block-copy-button"
             disabled={isAnimating}
             onClick={copyToClipboard}
             title={t.copyCode}
             type="button"
-            {...props}
+            {...restProps}
         >
-            {children ??
+            {localProps.children ??
                 (isCopied() ? (
                     <icons.CheckIcon size={14} />
                 ) : (

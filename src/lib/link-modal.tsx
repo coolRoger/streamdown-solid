@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup } from "solid-js";
+import { createEffect, createSignal, onCleanup, splitProps } from "solid-js";
 import { useIcons } from "./icon-context";
 import { lockBodyScroll, unlockBodyScroll } from "./scroll-lock";
 import "./streamdown-ui.css";
@@ -11,19 +11,20 @@ interface LinkSafetyModalProps {
     url: string;
 }
 
-export const LinkSafetyModal = ({
-    url,
-    isOpen,
-    onClose,
-    onConfirm,
-}: LinkSafetyModalProps) => {
+export const LinkSafetyModal = (props: LinkSafetyModalProps) => {
+    const [localProps] = splitProps(props, [
+        "url",
+        "isOpen",
+        "onClose",
+        "onConfirm",
+    ]);
     const { CheckIcon, CopyIcon, ExternalLinkIcon, XIcon } = useIcons();
     const [copied, setCopied] = createSignal(false);
     const t = useTranslations();
 
     const handleCopy = async () => {
         try {
-            await navigator.clipboard.writeText(url);
+            await navigator.clipboard.writeText(localProps.url);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch {
@@ -32,17 +33,17 @@ export const LinkSafetyModal = ({
     };
 
     const handleConfirm = () => {
-        onConfirm();
-        onClose();
+        localProps.onConfirm();
+        localProps.onClose();
     };
 
     createEffect(() => {
-        if (isOpen) {
+        if (localProps.isOpen) {
             lockBodyScroll();
 
             const handleEsc = (e: KeyboardEvent) => {
                 if (e.key === "Escape") {
-                    onClose();
+                    localProps.onClose();
                 }
             };
 
@@ -54,7 +55,7 @@ export const LinkSafetyModal = ({
         }
     });
 
-    if (!isOpen) {
+    if (!localProps.isOpen) {
         return null;
     }
 
@@ -63,16 +64,15 @@ export const LinkSafetyModal = ({
         <div
             class="sd-link-modal-backdrop"
             data-streamdown="link-safety-modal"
-            onClick={onClose}
+            onClick={localProps.onClose}
             onKeyDown={(e) => {
                 if (e.key === "Escape") {
-                    onClose();
+                    localProps.onClose();
                 }
             }}
             role="button"
             tabIndex={0}
         >
-            {/* biome-ignore lint/a11y/noStaticElementInteractions: "div with role=presentation is used for event propagation control" */}
             <div
                 class="sd-link-modal-panel"
                 onClick={(e) => e.stopPropagation()}
@@ -81,7 +81,7 @@ export const LinkSafetyModal = ({
             >
                 <button
                     class="sd-link-modal-close"
-                    onClick={onClose}
+                    onClick={localProps.onClose}
                     title={t.close}
                     type="button"
                 >
@@ -100,9 +100,9 @@ export const LinkSafetyModal = ({
 
                 <div
                     class="sd-link-modal-url"
-                    data-scrollable={url.length > 100}
+                    data-scrollable={localProps.url.length > 100}
                 >
-                    {url}
+                    {localProps.url}
                 </div>
 
                 <div class="sd-link-modal-actions">

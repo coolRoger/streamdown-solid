@@ -1,5 +1,5 @@
 import type { JSX } from "solid-js";
-import { createSignal, onMount } from "solid-js";
+import { createMemo, createSignal, onMount, splitProps } from "solid-js";
 import { useIcons } from "./icon-context";
 import type { ExtraProps } from "./markdown";
 import "./streamdown-ui.css";
@@ -10,28 +10,48 @@ const fileExtensionPattern = /\.[^/.]+$/;
 
 type ImageComponentProps = JSX.ImgHTMLAttributes<HTMLImageElement> &
     ExtraProps & {
-        className?: string;
+        class?: string;
     };
 
-export const ImageComponent = ({
-    node,
-    className,
-    src,
-    alt,
-    onLoad: onLoadProp,
-    onError: onErrorProp,
-    ...props
-}: ImageComponentProps) => {
+export const ImageComponent = (props: ImageComponentProps) => {
+    const [localProps, restProps] = splitProps(props, [
+        "node",
+        "class",
+        "src",
+        "alt",
+        "onLoad",
+        "onError",
+    ]);
+
     const { DownloadIcon } = useIcons();
     let imgRef: HTMLImageElement | undefined;
     const [imageLoaded, setImageLoaded] = createSignal(false);
     const [imageError, setImageError] = createSignal(false);
     const t = useTranslations();
 
-    const hasExplicitDimensions = props.width != null || props.height != null;
-    const showDownload = () =>
-        (imageLoaded() || hasExplicitDimensions) && !imageError();
-    const showFallback = () => imageError() && !hasExplicitDimensions;
+    const hasExplicitDimensions = createMemo(() => {
+        return restProps.width !== null || restProps.height !== null;
+    });
+
+    const showDownload = createMemo(() => {
+        if (imageLoaded()) {
+            return true;
+        }
+
+        if (hasExplicitDimensions()) {
+            return true;
+        }
+
+        if (!imageError()) {
+            return true;
+        }
+
+        return false;
+    });
+
+    const showFallback = createMemo(() => {
+        return imageError() && !hasExplicitDimensions();
+    });
 
     // Handle images already complete before React attaches event handlers (e.g. cached or SSR hydration)
     onMount(() => {
@@ -46,27 +66,28 @@ export const ImageComponent = ({
     const handleLoad: JSX.EventHandler<HTMLImageElement, Event> = (event) => {
         setImageLoaded(true);
         setImageError(false);
-        onLoadProp?.(event);
+        typeof localProps.onLoad === "function" && localProps.onLoad?.(event);
     };
 
     const handleError: JSX.EventHandler<HTMLImageElement, Event> = (event) => {
         setImageLoaded(false);
         setImageError(true);
-        onErrorProp?.(event);
+        typeof localProps.onError === "function" && localProps.onError?.(event);
     };
 
     const downloadImage = async () => {
         /* v8 ignore next */
-        if (!src) {
+        if (!localProps.src) {
             return;
         }
 
         try {
-            const response = await fetch(src);
+            const response = await fetch(localProps.src);
             const blob = await response.blob();
 
             // Extract filename from URL or use alt text with proper extension
-            const urlPath = new URL(src, window.location.origin).pathname;
+            const urlPath = new URL(localProps.src, window.location.origin)
+                .pathname;
             const originalFilename = urlPath.split("/").pop() || "";
             const extension = originalFilename.split(".").pop();
             const hasExtension =
@@ -95,18 +116,18 @@ export const ImageComponent = ({
                     fileExtension = "webp";
                 }
 
-                const baseName = alt || originalFilename || "image";
+                const baseName = localProps.alt || originalFilename || "image";
                 filename = `${baseName.replace(fileExtensionPattern, "")}.${fileExtension}`;
             }
 
             save(filename, blob, blob.type);
         } catch {
             // CORS fallback: open image in new tab for manual save
-            window.open(src, "_blank");
+            window.open(localProps.src, "_blank");
         }
     };
 
-    if (!src) {
+    if (!localProps.src) {
         return null;
     }
 
@@ -116,18 +137,18 @@ export const ImageComponent = ({
             data-streamdown="image-wrapper"
         >
             <img
-                alt={alt}
                 class={cn(
                     "sd-image",
                     showFallback() && "sd-image--hidden",
-                    className,
+                    localProps.class,
                 )}
                 data-streamdown="image"
                 onError={handleError}
                 onLoad={handleLoad}
                 ref={imgRef}
-                src={src}
-                {...props}
+                alt={localProps.alt}
+                src={localProps.src}
+                {...restProps}
             />
             {showFallback() && (
                 <span

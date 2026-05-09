@@ -1,5 +1,5 @@
-import { createMemo, lazy, Suspense } from "solid-js";
 import type { JSX } from "solid-js";
+import { createMemo, lazy, Suspense, splitProps } from "solid-js";
 import type { HighlightResult } from "../plugin-types";
 import { useCn } from "../prefix-context";
 import { CodeBlockBody } from "./body";
@@ -16,7 +16,7 @@ const trimTrailingNewlines = (str: string): string => {
 };
 
 type CodeBlockProps = JSX.HTMLAttributes<HTMLDivElement> & {
-    className?: string;
+    class?: string;
     code: string;
     language: string;
     /** Whether the code block is still being streamed (incomplete) */
@@ -33,19 +33,19 @@ const HighlightedCodeBlockBody = lazy(() =>
     })),
 );
 
-export const CodeBlock = ({
-    code,
-    language,
-    className,
-    children,
-    isIncomplete = false,
-    startLine,
-    lineNumbers,
-    ...rest
-}: CodeBlockProps) => {
+export const CodeBlock = (props: CodeBlockProps) => {
+    const [localProps, restProps] = splitProps(props, [
+        "code",
+        "language",
+        "class",
+        "children",
+        "isIncomplete",
+        "startLine",
+        "lineNumbers",
+    ]);
     const cn = useCn();
     // Remove trailing newlines to prevent empty line at end of code blocks
-    const trimmedCode = createMemo(() => trimTrailingNewlines(code));
+    const trimmedCode = createMemo(() => trimTrailingNewlines(localProps.code));
 
     // Memoize the raw fallback tokens to avoid recomputing on every render
     const raw = createMemo<HighlightResult>(() => ({
@@ -65,42 +65,42 @@ export const CodeBlock = ({
     }));
 
     return (
-        <CodeBlockContext.Provider value={{ code }}>
+        <CodeBlockContext.Provider value={{ code: localProps.code }}>
             <CodeBlockContainer
-                isIncomplete={isIncomplete}
-                language={language}
+                isIncomplete={localProps.isIncomplete ?? false}
+                language={localProps.language}
             >
-                <CodeBlockHeader language={language} />
-                {children ? (
+                <CodeBlockHeader language={localProps.language} />
+                {localProps.children ? (
                     <div class={cn("sd-codeblock-actions-wrap")}>
                         <div
                             class={cn("sd-codeblock-actions")}
                             data-streamdown="code-block-actions"
                         >
-                            {children}
+                            {localProps.children}
                         </div>
                     </div>
                 ) : null}
                 <Suspense
                     fallback={
                         <CodeBlockBody
-                            class={className}
-                            language={language}
-                            lineNumbers={lineNumbers}
+                            class={localProps.class}
+                            language={localProps.language}
+                            lineNumbers={localProps.lineNumbers}
                             result={raw()}
-                            startLine={startLine}
-                            {...rest}
+                            startLine={localProps.startLine}
+                            {...restProps}
                         />
                     }
                 >
                     <HighlightedCodeBlockBody
-                        class={className}
+                        class={localProps.class}
                         code={trimmedCode()}
-                        language={language}
-                        lineNumbers={lineNumbers}
+                        language={localProps.language}
+                        lineNumbers={localProps.lineNumbers}
                         raw={raw()}
-                        startLine={startLine}
-                        {...rest}
+                        startLine={localProps.startLine}
+                        {...restProps}
                     />
                 </Suspense>
             </CodeBlockContainer>

@@ -92,7 +92,6 @@ const countDoubleDollars = (str: string): number => {
     return count;
 };
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: "Complex parsing logic that handles multiple markdown edge cases"
 export const parseMarkdownIntoBlocks = (markdown: string): string[] => {
     // Check if the markdown contains footnotes (references or definitions)
     // Footnote references: [^1], [^label], etc.
@@ -147,7 +146,7 @@ export const parseMarkdownIntoBlocks = (markdown: string): string[] => {
         if (token.type === "html" && token.block) {
             const openingTagMatch = currentBlock.match(openingTagPattern);
             if (openingTagMatch) {
-                const tagName = openingTagMatch[1];
+                const tagName = openingTagMatch[1] ?? "";
                 // Count how many tags remain unclosed within this block
                 const openTags = countNonSelfClosingOpenTags(
                     currentBlock,
@@ -168,7 +167,7 @@ export const parseMarkdownIntoBlocks = (markdown: string): string[] => {
         // Skip if previous block was a code block (code blocks can contain $$ as shell syntax)
         if (mergedBlocksLen > 0 && !previousTokenWasCode) {
             const previousBlock = mergedBlocks[mergedBlocksLen - 1];
-            const prevDollarCount = countDoubleDollars(previousBlock);
+            const prevDollarCount = countDoubleDollars(previousBlock ?? "");
 
             if (prevDollarCount % 2 === 1) {
                 mergedBlocks[mergedBlocksLen - 1] =

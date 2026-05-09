@@ -1,6 +1,12 @@
 import type { MermaidConfig } from "mermaid";
-import { createEffect, createSignal, onCleanup, useContext } from "solid-js";
 import type { JSX } from "solid-js";
+import {
+    createEffect,
+    createSignal,
+    onCleanup,
+    splitProps,
+    useContext,
+} from "solid-js";
 import { Portal } from "solid-js/web";
 import { StreamdownContext } from "../../index";
 import { useIcons } from "../icon-context";
@@ -12,21 +18,23 @@ import { Mermaid } from ".";
 
 type MermaidFullscreenButtonProps =
     JSX.ButtonHTMLAttributes<HTMLButtonElement> & {
-        className?: string;
+        class?: string;
         chart: string;
         config?: MermaidConfig;
         onFullscreen?: () => void;
         onExit?: () => void;
     };
 
-export const MermaidFullscreenButton = ({
-    chart,
-    config,
-    onFullscreen,
-    onExit,
-    className,
-    ...props
-}: MermaidFullscreenButtonProps) => {
+export const MermaidFullscreenButton = (
+    props: MermaidFullscreenButtonProps,
+) => {
+    const [localProps, restProps] = splitProps(props, [
+        "chart",
+        "config",
+        "onFullscreen",
+        "onExit",
+        "class",
+    ]);
     const { Maximize2Icon, XIcon } = useIcons();
     const cn = useCn();
     const [isFullscreen, setIsFullscreen] = createSignal(false);
@@ -73,21 +81,21 @@ export const MermaidFullscreenButton = ({
     // Handle callbacks separately to avoid scroll lock flickering
     createEffect(() => {
         if (isFullscreen()) {
-            onFullscreen?.();
-        } else if (onExit) {
-            onExit();
+            localProps.onFullscreen?.();
+        } else if (localProps.onExit) {
+            localProps.onExit();
         }
     });
 
     return (
         <>
             <button
-                class={cn("sd-icon-button", className)}
+                class={cn("sd-icon-button", localProps.class)}
                 disabled={isAnimating}
                 onClick={handleToggle}
                 title={t.viewFullscreen}
                 type="button"
-                {...props}
+                {...restProps}
             >
                 <Maximize2Icon size={14} />
             </button>
@@ -114,7 +122,6 @@ export const MermaidFullscreenButton = ({
                         >
                             <XIcon size={20} />
                         </button>
-                        {/* biome-ignore lint/a11y/noStaticElementInteractions: "div with role=presentation is used for event propagation control" */}
                         <div
                             class={cn("sd-mermaid-fullscreen-content")}
                             onClick={(e) => e.stopPropagation()}
@@ -122,9 +129,9 @@ export const MermaidFullscreenButton = ({
                             role="presentation"
                         >
                             <Mermaid
-                                chart={chart}
+                                chart={localProps.chart}
                                 class={cn("sd-mermaid-fullscreen-canvas")}
-                                config={config}
+                                config={localProps.config}
                                 fullscreen={true}
                                 showControls={showPanZoomControls}
                             />

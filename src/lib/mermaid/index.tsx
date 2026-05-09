@@ -1,5 +1,5 @@
 import type { MermaidConfig } from "mermaid";
-import { createEffect, createSignal, useContext } from "solid-js";
+import { createEffect, createSignal, splitProps, useContext } from "solid-js";
 import { useDeferredRender } from "../../hooks/use-deferred-render";
 import { StreamdownContext } from "../../index";
 import { useMermaidPlugin } from "../plugin-context";
@@ -9,19 +9,20 @@ import { PanZoom } from "./pan-zoom";
 
 interface MermaidProps {
     chart: string;
-    className?: string;
+    class?: string;
     config?: MermaidConfig;
     fullscreen?: boolean;
     showControls?: boolean;
 }
 
-export const Mermaid = ({
-    chart,
-    className,
-    config,
-    fullscreen = false,
-    showControls = true,
-}: MermaidProps) => {
+export const Mermaid = (props: MermaidProps) => {
+    const [localProps] = splitProps(props, [
+        "chart",
+        "class",
+        "config",
+        "fullscreen",
+        "showControls",
+    ]);
     const cn = useCn();
     const [error, setError] = createSignal<string | null>(null);
     const [isLoading, setIsLoading] = createSignal(false);
@@ -34,10 +35,8 @@ export const Mermaid = ({
 
     // Use deferred render hook for optimal performance
     const { shouldRender, containerRef } = useDeferredRender({
-        immediate: fullscreen,
+        immediate: localProps.fullscreen ?? false,
     });
-
-    // biome-ignore lint/correctness/useExhaustiveDependencies: "Required for Mermaid"
     createEffect(() => {
         retryCount();
         // Only render when shouldRender is true
@@ -59,16 +58,20 @@ export const Mermaid = ({
                 setIsLoading(true);
 
                 // Get mermaid instance from plugin
-                const mermaid = mermaidPlugin.getMermaid(config);
+                const mermaid = mermaidPlugin.getMermaid(localProps.config);
 
                 // Use a stable ID based on chart content hash and timestamp to ensure uniqueness
-                const chartHash = chart.split("").reduce((acc, char) => {
-                    // biome-ignore lint/suspicious/noBitwiseOperators: "Required for Mermaid"
-                    return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
-                }, 0);
+                const chartHash = localProps.chart
+                    .split("")
+                    .reduce((acc, char) => {
+                        return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
+                    }, 0);
                 const uniqueId = `mermaid-${Math.abs(chartHash)}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-                const { svg } = await mermaid.render(uniqueId, chart);
+                const { svg } = await mermaid.render(
+                    uniqueId,
+                    localProps.chart,
+                );
 
                 // Update both current and last valid SVG
                 setSvgContent(svg);
@@ -97,7 +100,7 @@ export const Mermaid = ({
     if (!(shouldRender() || svgContent() || lastValidSvg())) {
         return (
             <div
-                class={cn("sd-mermaid-placeholder", className)}
+                class={cn("sd-mermaid-placeholder", localProps.class)}
                 ref={containerRef}
             />
         );
@@ -106,7 +109,7 @@ export const Mermaid = ({
     if (isLoading() && !svgContent() && !lastValidSvg()) {
         return (
             <div
-                class={cn("sd-mermaid-loading-wrap", className)}
+                class={cn("sd-mermaid-loading-wrap", localProps.class)}
                 ref={containerRef}
             >
                 <div class={cn("sd-mermaid-loading")}>
@@ -128,7 +131,7 @@ export const Mermaid = ({
             return (
                 <div ref={containerRef}>
                     <ErrorComponent
-                        chart={chart}
+                        chart={localProps.chart}
                         error={error() ?? ""}
                         retry={retry}
                     />
@@ -139,7 +142,7 @@ export const Mermaid = ({
         // Default error display
         return (
             <div
-                class={cn("sd-mermaid-error", className)}
+                class={cn("sd-mermaid-error", localProps.class)}
                 ref={containerRef}
             >
                 <p class={cn("sd-mermaid-error-text")}>
@@ -149,7 +152,9 @@ export const Mermaid = ({
                     <summary class={cn("sd-mermaid-error-summary")}>
                         Show Code
                     </summary>
-                    <pre class={cn("sd-mermaid-error-code")}>{chart}</pre>
+                    <pre class={cn("sd-mermaid-error-code")}>
+                        {localProps.chart}
+                    </pre>
                 </details>
             </div>
         );
@@ -160,31 +165,32 @@ export const Mermaid = ({
 
     return (
         <div
-            class={cn("sd-mermaid-root", className)}
+            class={cn("sd-mermaid-root", localProps.class)}
             data-streamdown="mermaid"
             ref={containerRef}
         >
             <PanZoom
                 class={cn(
-                    fullscreen
+                    localProps.fullscreen
                         ? "sd-mermaid-panzoom sd-mermaid-panzoom--fullscreen"
                         : "sd-mermaid-panzoom",
-                    className,
+                    localProps.class,
                 )}
-                fullscreen={fullscreen}
+                fullscreen={localProps.fullscreen ?? false}
                 maxZoom={3}
                 minZoom={0.5}
-                showControls={showControls}
+                showControls={localProps.showControls ?? true}
                 zoomStep={0.1}
             >
                 <div
                     aria-label="Mermaid chart"
                     class={cn(
                         "sd-mermaid-svg-wrap",
-                        fullscreen ? "sd-mermaid-svg-wrap--fullscreen" : null,
+                        localProps.fullscreen
+                            ? "sd-mermaid-svg-wrap--fullscreen"
+                            : null,
                     )}
-                    // biome-ignore lint/security/noDangerouslySetInnerHtml: "Required for Mermaid"
-                    dangerouslySetInnerHTML={{ __html: displaySvg }}
+                    innerHTML={displaySvg}
                     role="img"
                 />
             </PanZoom>

@@ -1,37 +1,36 @@
-import type { JSX } from "solid-js";
+import { type JSX, splitProps } from "solid-js";
 import { useCn } from "../prefix-context";
 import "../streamdown-ui.css";
 
 type CodeBlockContainerProps = JSX.HTMLAttributes<HTMLDivElement> & {
-    className?: string;
+    class?: string;
     language: string;
     /** Whether the code block is still being streamed (incomplete) */
     isIncomplete?: boolean;
 };
 
-export const CodeBlockContainer = ({
-    className,
-    language,
-    style,
-    isIncomplete,
-    ...props
-}: CodeBlockContainerProps) => {
+export const CodeBlockContainer = (props: CodeBlockContainerProps) => {
+    const [localProps, restProps] = splitProps(props, [
+        "class",
+        "language",
+        "isIncomplete",
+    ]);
     const cn = useCn();
     return (
         <div
-            class={cn("sd-codeblock-container", className)}
-            data-incomplete={isIncomplete || undefined}
-            data-language={language}
+            class={cn("sd-codeblock-container", localProps.class)}
+            data-incomplete={localProps.isIncomplete || undefined}
+            data-language={localProps.language}
             data-streamdown="code-block"
             style={{
                 // Use content-visibility to skip rendering off-screen blocks
                 // This can significantly improve performance for large documents
-                contentVisibility: "auto",
+                "content-visibility": "auto",
                 // Provide a hint for layout to prevent layout shifts
-                containIntrinsicSize: "auto 200px",
-                ...style,
+                "contain-intrinsic-size": "auto 200px",
+                ...(typeof restProps.style !== "string" ? restProps.style : {}),
             }}
-            {...props}
+            {...restProps}
         />
     );
 };

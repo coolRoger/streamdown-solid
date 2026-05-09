@@ -48,8 +48,7 @@
         "test:ssr": "pnpm run test:client --mode ssr",
         "prepublishOnly": "pnpm build",
         "format": "biome format --write",
-        "lint": "concurrently pnpm:lint:*",
-        "lint:code": "eslint --ignore-path .gitignore --max-warnings 0 src/**/*.{js,ts,tsx,jsx}",
+        "check": "biome check",
         "lint:types": "tsc --noEmit",
         "update-deps": "pnpm up -Li"
     },
@@ -81,10 +80,22 @@
     },
     "dependencies": {
         "@types/hast": "^3.0.4",
+        "@types/mdast": "^4.0.4",
+        "@types/unist": "^3.0.3",
+        "hast-util-to-jsx-runtime": "^2.3.6",
+        "html-url-attributes": "^3.0.1",
+        "marked": "^18.0.3",
         "mermaid": "^11.14.0",
         "rehype": "^13.0.2",
+        "rehype-harden": "^1.1.8",
+        "rehype-raw": "^7.0.0",
+        "rehype-sanitize": "^6.0.0",
+        "remark-gfm": "^4.0.1",
+        "remark-parse": "^11.0.0",
+        "remark-rehype": "^11.1.2",
         "shiki": "^4.0.2",
         "unified": "^11.0.5",
+        "unist-util-visit": "^5.1.0",
         "unist-util-visit-parents": "^6.0.2"
     }
 }

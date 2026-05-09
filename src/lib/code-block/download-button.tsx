@@ -1,5 +1,5 @@
-import { useContext } from "solid-js";
 import type { JSX } from "solid-js";
+import { splitProps, useContext } from "solid-js";
 import { StreamdownContext } from "../../index";
 import { useIcons } from "../icon-context";
 import { useCn } from "../prefix-context";
@@ -11,7 +11,7 @@ export type CodeBlockDownloadButtonProps =
     JSX.ButtonHTMLAttributes<HTMLButtonElement> & {
         onDownload?: () => void;
         onError?: (error: Error) => void;
-        className?: string;
+        class?: string;
     };
 
 const languageExtensionMap: Record<string, string> = {
@@ -323,27 +323,29 @@ const languageExtensionMap: Record<string, string> = {
     文言: "wy",
 };
 
-export const CodeBlockDownloadButton = ({
-    onDownload,
-    onError,
-    language,
-    children,
-    className,
-    code: propCode,
-    ...props
-}: CodeBlockDownloadButtonProps & {
-    code?: string;
-    language?: string;
-}) => {
+export const CodeBlockDownloadButton = (
+    props: CodeBlockDownloadButtonProps & {
+        code?: string;
+        language?: string;
+    },
+) => {
+    const [localProps, restProps] = splitProps(props, [
+        "onDownload",
+        "onError",
+        "language",
+        "children",
+        "class",
+        "code",
+    ]);
     const cn = useCn();
     const { code: contextCode } = useCodeBlockContext();
     const { isAnimating } = useContext(StreamdownContext);
     const t = useTranslations();
     const icons = useIcons();
-    const code = propCode ?? contextCode;
+    const code = localProps.code ?? contextCode;
     const extension =
-        language && language in languageExtensionMap
-            ? languageExtensionMap[language]
+        localProps.language && localProps.language in languageExtensionMap
+            ? languageExtensionMap[localProps.language]
             : "txt";
     const filename = `file.${extension}`;
     const mimeType = "text/plain";
@@ -351,23 +353,23 @@ export const CodeBlockDownloadButton = ({
     const downloadCode = () => {
         try {
             save(filename, code, mimeType);
-            onDownload?.();
+            localProps.onDownload?.();
         } catch (error) {
-            onError?.(error as Error);
+            localProps.onError?.(error as Error);
         }
     };
 
     return (
         <button
-            class={cn("sd-icon-button", className)}
+            class={cn("sd-icon-button", localProps.class)}
             data-streamdown="code-block-download-button"
             disabled={isAnimating}
             onClick={downloadCode}
             title={t.downloadFile}
             type="button"
-            {...props}
+            {...restProps}
         >
-            {children ?? <icons.DownloadIcon size={14} />}
+            {localProps.children ?? <icons.DownloadIcon size={14} />}
         </button>
     );
 };

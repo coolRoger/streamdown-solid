@@ -1,7 +1,7 @@
 import type { Component } from "solid-js";
-import logo from "./logo.svg";
+import { Streamdown } from "src";
 import styles from "./App.module.css";
-import { Hello } from "src";
+import logo from "./logo.svg";
 
 const App: Component = () => {
     return (
@@ -13,7 +13,7 @@ const App: Component = () => {
                     alt="logo"
                 />
                 <h1>
-                    <Hello></Hello>
+                    <Streamdown />
                 </h1>
                 <p>
                     Edit <code>src/App.tsx</code> and save to reload.

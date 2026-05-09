@@ -1,13 +1,13 @@
-import { createEffect, createSignal, useContext } from "solid-js";
-import type { JSX } from "solid-js";
 import type { BundledLanguage } from "shiki";
+import type { JSX } from "solid-js";
+import { createEffect, createSignal, splitProps, useContext } from "solid-js";
 import { StreamdownContext } from "../../index";
 import { useCodePlugin } from "../plugin-context";
 import type { HighlightResult } from "../plugin-types";
 import { CodeBlockBody } from "./body";
 
 type HighlightedCodeBlockBodyProps = JSX.HTMLAttributes<HTMLDivElement> & {
-    className?: string;
+    class?: string;
     code: string;
     language: string;
     raw: HighlightResult;
@@ -15,29 +15,31 @@ type HighlightedCodeBlockBodyProps = JSX.HTMLAttributes<HTMLDivElement> & {
     lineNumbers?: boolean;
 };
 
-export const HighlightedCodeBlockBody = ({
-    code,
-    language,
-    raw,
-    className,
-    startLine,
-    lineNumbers,
-    ...rest
-}: HighlightedCodeBlockBodyProps) => {
+export const HighlightedCodeBlockBody = (
+    props: HighlightedCodeBlockBodyProps,
+) => {
+    const [localProps, restProps] = splitProps(props, [
+        "code",
+        "language",
+        "raw",
+        "class",
+        "startLine",
+        "lineNumbers",
+    ]);
     const { shikiTheme } = useContext(StreamdownContext);
     const codePlugin = useCodePlugin();
-    const [result, setResult] = createSignal<HighlightResult>(raw);
+    const [result, setResult] = createSignal<HighlightResult>(localProps.raw);
 
     createEffect(() => {
         if (!codePlugin) {
-            setResult(raw);
+            setResult(localProps.raw);
             return;
         }
 
         const cachedResult = codePlugin.highlight(
             {
-                code,
-                language: language as BundledLanguage,
+                code: localProps.code,
+                language: localProps.language as BundledLanguage,
                 themes: shikiTheme,
             },
             (highlightedResult) => {
@@ -48,16 +50,22 @@ export const HighlightedCodeBlockBody = ({
         if (cachedResult) {
             setResult(cachedResult);
         }
-    }, [code, language, shikiTheme, codePlugin, raw]);
+    }, [
+        localProps.code,
+        localProps.language,
+        shikiTheme,
+        codePlugin,
+        localProps.raw,
+    ]);
 
     return (
         <CodeBlockBody
-            class={className}
-            language={language}
-            lineNumbers={lineNumbers}
+            class={localProps.class}
+            language={localProps.language}
+            lineNumbers={localProps.lineNumbers}
             result={result()}
-            startLine={startLine}
-            {...rest}
+            startLine={localProps.startLine}
+            {...restProps}
         />
     );
 };

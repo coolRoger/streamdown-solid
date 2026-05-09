@@ -1,5 +1,11 @@
-import { createSignal, onCleanup, onMount, useContext } from "solid-js";
 import type { JSX } from "solid-js";
+import {
+    createSignal,
+    onCleanup,
+    onMount,
+    splitProps,
+    useContext,
+} from "solid-js";
 import { StreamdownContext } from "../../index";
 import { useIcons } from "../icon-context";
 import { useCn } from "../prefix-context";
@@ -14,21 +20,22 @@ import {
 
 export interface TableDownloadButtonProps {
     children?: JSX.Element;
-    className?: string;
+    class?: string;
     filename?: string;
     format?: "csv" | "markdown";
     onDownload?: () => void;
     onError?: (error: Error) => void;
 }
 
-export const TableDownloadButton = ({
-    children,
-    className,
-    onDownload,
-    onError,
-    format = "csv",
-    filename,
-}: TableDownloadButtonProps) => {
+export const TableDownloadButton = (props: TableDownloadButtonProps) => {
+    const [localProps] = splitProps(props, [
+        "children",
+        "class",
+        "onDownload",
+        "onError",
+        "format",
+        "filename",
+    ]);
     const cn = useCn();
     const { isAnimating } = useContext(StreamdownContext);
     const t = useTranslations();
@@ -48,7 +55,7 @@ export const TableDownloadButton = ({
             ) as HTMLTableElement;
 
             if (!tableElement) {
-                onError?.(new Error("Table not found"));
+                localProps.onError?.(new Error("Table not found"));
                 return;
             }
 
@@ -57,7 +64,7 @@ export const TableDownloadButton = ({
             let mimeType = "";
             let extension = "";
 
-            switch (format) {
+            switch (localProps.format ?? "csv") {
                 case "csv":
                     content = tableDataToCSV(tableData);
                     mimeType = "text/csv";
@@ -74,44 +81,49 @@ export const TableDownloadButton = ({
                     extension = "csv";
             }
 
-            save(`${filename || "table"}.${extension}`, content, mimeType);
+            save(
+                `${localProps.filename || "table"}.${extension}`,
+                content,
+                mimeType,
+            );
 
-            onDownload?.();
+            localProps.onDownload?.();
         } catch (error) {
-            onError?.(error as Error);
+            localProps.onError?.(error as Error);
         }
     };
 
     return (
         <button
-            class={cn("sd-icon-button", className)}
+            class={cn("sd-icon-button", localProps.class)}
             disabled={isAnimating}
             onClick={downloadTableData}
             title={
-                format === "csv"
+                (localProps.format ?? "csv") === "csv"
                     ? t.downloadTableAsCsv
                     : t.downloadTableAsMarkdown
             }
             type="button"
         >
-            {children ?? <icons.DownloadIcon size={14} />}
+            {localProps.children ?? <icons.DownloadIcon size={14} />}
         </button>
     );
 };
 
 export interface TableDownloadDropdownProps {
     children?: JSX.Element;
-    className?: string;
+    class?: string;
     onDownload?: (format: "csv" | "markdown") => void;
     onError?: (error: Error) => void;
 }
 
-export const TableDownloadDropdown = ({
-    children,
-    className,
-    onDownload,
-    onError,
-}: TableDownloadDropdownProps) => {
+export const TableDownloadDropdown = (props: TableDownloadDropdownProps) => {
+    const [localProps] = splitProps(props, [
+        "children",
+        "class",
+        "onDownload",
+        "onError",
+    ]);
     const cn = useCn();
     const [isOpen, setIsOpen] = createSignal(false);
     let dropdownRef: HTMLDivElement | undefined;
@@ -129,7 +141,7 @@ export const TableDownloadDropdown = ({
             ) as HTMLTableElement;
 
             if (!tableElement) {
-                onError?.(new Error("Table not found"));
+                localProps.onError?.(new Error("Table not found"));
                 return;
             }
 
@@ -144,9 +156,9 @@ export const TableDownloadDropdown = ({
 
             save(filename, content, mimeType);
             setIsOpen(false);
-            onDownload?.(format);
+            localProps.onDownload?.(format);
         } catch (error) {
-            onError?.(error as Error);
+            localProps.onError?.(error as Error);
         }
     };
 
@@ -170,13 +182,13 @@ export const TableDownloadDropdown = ({
             ref={dropdownRef}
         >
             <button
-                class={cn("sd-icon-button", className)}
+                class={cn("sd-icon-button", localProps.class)}
                 disabled={isAnimating}
                 onClick={() => setIsOpen(!isOpen())}
                 title={t.downloadTable}
                 type="button"
             >
-                {children ?? <icons.DownloadIcon size={14} />}
+                {localProps.children ?? <icons.DownloadIcon size={14} />}
             </button>
             {isOpen() ? (
                 <div class={cn("sd-dropdown-menu")}>

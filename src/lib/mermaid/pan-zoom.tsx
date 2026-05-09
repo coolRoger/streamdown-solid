@@ -1,12 +1,18 @@
-import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import type { JSX } from "solid-js";
+import {
+    createEffect,
+    createSignal,
+    onCleanup,
+    onMount,
+    splitProps,
+} from "solid-js";
 import { useIcons } from "../icon-context";
 import { useCn } from "../prefix-context";
 import "../streamdown-ui.css";
 
 interface PanZoomProps {
     children: JSX.Element;
-    className?: string;
+    class?: string;
     fullscreen?: boolean;
     initialZoom?: number;
     maxZoom?: number;
@@ -15,21 +21,22 @@ interface PanZoomProps {
     zoomStep?: number;
 }
 
-export const PanZoom = ({
-    children,
-    className,
-    minZoom = 0.5,
-    maxZoom = 3,
-    zoomStep = 0.1,
-    showControls = true,
-    initialZoom = 1,
-    fullscreen = false,
-}: PanZoomProps) => {
+export const PanZoom = (props: PanZoomProps) => {
+    const [localProps] = splitProps(props, [
+        "children",
+        "class",
+        "minZoom",
+        "maxZoom",
+        "zoomStep",
+        "showControls",
+        "initialZoom",
+        "fullscreen",
+    ]);
     const { RotateCcwIcon, ZoomInIcon, ZoomOutIcon } = useIcons();
     const cn = useCn();
     let containerRef: HTMLDivElement | undefined;
     let contentRef: HTMLDivElement | undefined;
-    const [zoom, setZoom] = createSignal(initialZoom);
+    const [zoom, setZoom] = createSignal(localProps.initialZoom ?? 1);
     const [pan, setPan] = createSignal({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = createSignal(false);
     const [panStart, setPanStart] = createSignal({ x: 0, y: 0 });
@@ -41,29 +48,30 @@ export const PanZoom = ({
     const handleZoom = (delta: number) => {
         setZoom((prevZoom) => {
             const newZoom = Math.max(
-                minZoom,
-                Math.min(maxZoom, prevZoom + delta),
+                localProps.minZoom ?? 0.5,
+                Math.min(localProps.maxZoom ?? 3, prevZoom + delta),
             );
             return newZoom;
         });
     };
 
     const handleZoomIn = () => {
-        handleZoom(zoomStep);
+        handleZoom(localProps.zoomStep ?? 0.1);
     };
 
     const handleZoomOut = () => {
-        handleZoom(-zoomStep);
+        handleZoom(-(localProps.zoomStep ?? 0.1));
     };
 
     const handleReset = () => {
-        setZoom(initialZoom);
+        setZoom(localProps.initialZoom ?? 1);
         setPan({ x: 0, y: 0 });
     };
 
     const handleWheel = (e: WheelEvent) => {
         e.preventDefault();
-        const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
+        const step = localProps.zoomStep ?? 0.1;
+        const delta = e.deltaY > 0 ? -step : step;
         handleZoom(delta);
     };
 
@@ -158,26 +166,26 @@ export const PanZoom = ({
         <div
             class={cn(
                 "sd-panzoom-root",
-                fullscreen
+                localProps.fullscreen
                     ? "sd-panzoom-root--fullscreen"
                     : "sd-panzoom-root--normal",
-                className,
+                localProps.class,
             )}
             ref={containerRef}
             style={{ cursor: isPanning() ? "grabbing" : "grab" }}
         >
-            {showControls ? (
+            {(localProps.showControls ?? true) ? (
                 <div
                     class={cn(
                         "sd-panzoom-controls",
-                        fullscreen
+                        localProps.fullscreen
                             ? "sd-panzoom-controls--fullscreen"
                             : "sd-panzoom-controls--normal",
                     )}
                 >
                     <button
                         class={cn("sd-panzoom-button")}
-                        disabled={zoom() >= maxZoom}
+                        disabled={zoom() >= (localProps.maxZoom ?? 3)}
                         onClick={handleZoomIn}
                         title="Zoom in"
                         type="button"
@@ -186,7 +194,7 @@ export const PanZoom = ({
                     </button>
                     <button
                         class={cn("sd-panzoom-button")}
-                        disabled={zoom() <= minZoom}
+                        disabled={zoom() <= (localProps.minZoom ?? 0.5)}
                         onClick={handleZoomOut}
                         title="Zoom out"
                         type="button"
@@ -206,7 +214,7 @@ export const PanZoom = ({
             <div
                 class={cn(
                     "sd-panzoom-content",
-                    fullscreen
+                    localProps.fullscreen
                         ? "sd-panzoom-content--fullscreen"
                         : "sd-panzoom-content--normal",
                 )}
@@ -216,11 +224,11 @@ export const PanZoom = ({
                 style={{
                     transform: `translate(${pan().x}px, ${pan().y}px) scale(${zoom()})`,
                     "transform-origin": "center center",
-                    touchAction: "none",
-                    willChange: "transform",
+                    "touch-action": "none",
+                    "will-change": "transform",
                 }}
             >
-                {children}
+                {localProps.children}
             </div>
         </div>
     );

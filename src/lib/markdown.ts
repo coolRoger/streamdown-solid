@@ -1,12 +1,12 @@
 import type { Element, Nodes, Parents, Root } from "hast";
 import { toJsxRuntime } from "hast-util-to-jsx-runtime";
 import { urlAttributes } from "html-url-attributes";
-import type { Component, JSX } from "solid-js";
-import { Fragment, jsx, jsxs } from "solid-js/h/jsx-runtime";
 import rehypeRaw from "rehype-raw";
 import remarkParse from "remark-parse";
 import type { Options as RemarkRehypeOptions } from "remark-rehype";
 import remarkRehype from "remark-rehype";
+import type { Component, JSX } from "solid-js";
+import { Fragment, jsx, jsxs } from "solid-js/h/jsx-runtime";
 import type { PluggableList } from "unified";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
@@ -59,12 +59,10 @@ const EMPTY_PLUGINS: PluggableList = [];
 const DEFAULT_REMARK_REHYPE_OPTIONS = { allowDangerousHtml: true };
 
 // Plugin name cache for faster serialization
-// biome-ignore lint/complexity/noBannedTypes: "Need Function type for plugin caching"
 const pluginNameCache = new WeakMap<Function, string>();
 
 // LRU Cache for unified processors
 class ProcessorCache {
-    // biome-ignore lint/suspicious/noExplicitAny: Processor type is complex and varies with plugins
     private readonly cache = new Map<string, any>();
     private readonly keyCache = new WeakMap<Readonly<Options>, string>();
     private readonly maxSize = 100;
@@ -88,7 +86,6 @@ class ProcessorCache {
         }
 
         // Optimize serialization for plugins
-        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: "Plugin serialization requires checking multiple plugin formats"
         const serializePlugins = (
             plugins: PluggableList | undefined,
         ): string => {
@@ -160,7 +157,6 @@ class ProcessorCache {
         return processor;
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: Processor type is complex and varies with plugins
     set(options: Readonly<Options>, processor: any): void {
         const key = this.generateCacheKey(options);
 
@@ -188,7 +184,6 @@ const processorCache = new ProcessorCache();
 export const Markdown = (options: Readonly<Options>) => {
     const processor = getCachedProcessor(options);
     const content = options.children || "";
-    // biome-ignore lint/suspicious/noExplicitAny: runSync return type varies with processor configuration
     const tree = processor.runSync(processor.parse(content), content) as any;
     return post(tree, options);
 };
@@ -257,7 +252,7 @@ const transformUrls = (node: Element, transform: UrlTransform): void => {
         ) {
             const value = node.properties[key];
             const test = urlAttributes[key];
-            if (test === null || test.includes(node.tagName)) {
+            if (test === null || test?.includes(node.tagName)) {
                 node.properties[key] =
                     transform(String(value || ""), key, node) ?? undefined;
             }

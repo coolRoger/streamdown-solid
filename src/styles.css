@@ -33,3 +33,25 @@
     animation: var(--sd-animation, sd-fadeIn) var(--sd-duration, 150ms)
         var(--sd-easing, ease) var(--sd-delay, 0ms) both;
 }
+
+.sd-streamdown-root {
+    white-space: normal;
+}
+
+.sd-streamdown-root > * + * {
+    margin-top: 1rem;
+}
+
+.sd-streamdown-root > :first-child {
+    margin-top: 0;
+}
+
+.sd-streamdown-root > :last-child {
+    margin-bottom: 0;
+}
+
+.sd-streamdown-root--with-caret > :last-child::after {
+    content: var(--streamdown-caret);
+    display: inline;
+    vertical-align: baseline;
+}

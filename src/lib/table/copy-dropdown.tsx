@@ -1,5 +1,11 @@
-import { createSignal, onCleanup, onMount, useContext } from "solid-js";
 import type { JSX } from "solid-js";
+import {
+    createSignal,
+    onCleanup,
+    onMount,
+    splitProps,
+    useContext,
+} from "solid-js";
 import { StreamdownContext } from "../../index";
 import { useIcons } from "../icon-context";
 import { useCn } from "../prefix-context";
@@ -14,19 +20,20 @@ import {
 
 export interface TableCopyDropdownProps {
     children?: JSX.Element;
-    className?: string;
+    class?: string;
     onCopy?: (format: "csv" | "tsv" | "md") => void;
     onError?: (error: Error) => void;
     timeout?: number;
 }
 
-export const TableCopyDropdown = ({
-    children,
-    className,
-    onCopy,
-    onError,
-    timeout = 2000,
-}: TableCopyDropdownProps) => {
+export const TableCopyDropdown = (props: TableCopyDropdownProps) => {
+    const [localProps] = splitProps(props, [
+        "children",
+        "class",
+        "onCopy",
+        "onError",
+        "timeout",
+    ]);
     const cn = useCn();
     const [isOpen, setIsOpen] = createSignal(false);
     const [isCopied, setIsCopied] = createSignal(false);
@@ -37,7 +44,7 @@ export const TableCopyDropdown = ({
 
     const copyTableData = async (format: "csv" | "tsv" | "md") => {
         if (typeof window === "undefined" || !navigator?.clipboard?.write) {
-            onError?.(new Error("Clipboard API not available"));
+            localProps.onError?.(new Error("Clipboard API not available"));
             return;
         }
 
@@ -50,7 +57,7 @@ export const TableCopyDropdown = ({
             ) as HTMLTableElement;
 
             if (!tableElement) {
-                onError?.(new Error("Table not found"));
+                localProps.onError?.(new Error("Table not found"));
                 return;
             }
 
@@ -74,10 +81,13 @@ export const TableCopyDropdown = ({
             await navigator.clipboard.write([clipboardItemData]);
             setIsCopied(true);
             setIsOpen(false);
-            onCopy?.(format);
-            timeoutRef = window.setTimeout(() => setIsCopied(false), timeout);
+            localProps.onCopy?.(format);
+            timeoutRef = window.setTimeout(
+                () => setIsCopied(false),
+                localProps.timeout ?? 2000,
+            );
         } catch (error) {
-            onError?.(error as Error);
+            localProps.onError?.(error as Error);
         }
     };
 
@@ -104,13 +114,13 @@ export const TableCopyDropdown = ({
             ref={dropdownRef}
         >
             <button
-                class={cn("sd-icon-button", className)}
+                class={cn("sd-icon-button", localProps.class)}
                 disabled={isAnimating}
                 onClick={() => setIsOpen(!isOpen())}
                 title={t.copyTable}
                 type="button"
             >
-                {children ??
+                {localProps.children ??
                     (isCopied() ? (
                         <icons.CheckIcon
                             height={14}

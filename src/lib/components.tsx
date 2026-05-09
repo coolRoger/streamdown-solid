@@ -1,5 +1,12 @@
-import { createSignal, lazy, Suspense, useContext, type JSX } from "solid-js";
-// BundledLanguage type removed - we now support any language string
+import {
+    createMemo,
+    createSignal,
+    type JSX,
+    lazy,
+    Suspense,
+    splitProps,
+    useContext,
+} from "solid-js";
 import { type ControlsConfig, StreamdownContext } from "../index";
 import "./streamdown-ui.css";
 import { useIsCodeFenceIncomplete } from "./block-incomplete-context";
@@ -18,90 +25,400 @@ import { Table } from "./table";
 
 const START_LINE_PATTERN = /startLine=(\d+)/;
 const NO_LINE_NUMBERS_PATTERN = /\bnoLineNumbers\b/;
+const LANGUAGE_REGEX = /language-([^\s]+)/;
 
-// Lazy load heavy components
 const Mermaid = lazy(() =>
     import("./mermaid").then((mod) => ({ default: mod.Mermaid })),
 );
-
-const LANGUAGE_REGEX = /language-([^\s]+)/;
 
 interface MarkdownPoint {
     column?: number;
     line?: number;
 }
+
 interface MarkdownPosition {
     end?: MarkdownPoint;
     start?: MarkdownPoint;
 }
+
 interface MarkdownNode {
+    tagName?: string;
     position?: MarkdownPosition;
-    properties?: { className?: string; metastring?: string };
+    properties?: {
+        class?: string | string[];
+        metastring?: string;
+        [key: string]: unknown;
+    };
 }
 
 type WithNode<T> = T & {
     node?: MarkdownNode;
     children?: JSX.Element;
-    className?: string;
+    class?: string;
 };
 
-const isValidElement = (
-    value: unknown,
-): value is { props: Record<string, unknown>; type?: unknown } =>
+type SolidLikeElement = {
+    props: Record<string, unknown>;
+    type?: unknown;
+};
+
+const isValidElement = (value: unknown): value is SolidLikeElement =>
     typeof value === "object" && value !== null && "props" in value;
 
-const cloneElement = (
-    element: { props: Record<string, unknown>; type?: unknown },
-    nextProps: Record<string, unknown>,
-) => ({
-    ...element,
-    props: {
-        ...element.props,
-        ...nextProps,
-    },
-});
+const toArray = (children: JSX.Element): JSX.Element[] =>
+    Array.isArray(children) ? children : [children];
 
-const memo = <T,>(
-    component: (props: T) => JSX.Element,
-    _compare?: (prev: T, next: T) => boolean,
-) => component;
+const hasRenderableValue = (child: JSX.Element): boolean =>
+    child !== null && child !== undefined && child !== "" && child !== false;
 
-function sameNodePosition(prev?: MarkdownNode, next?: MarkdownNode): boolean {
-    if (!(prev?.position || next?.position)) {
-        return true;
-    }
-    if (!(prev?.position && next?.position)) {
-        return false;
+const getChildNode = (child: JSX.Element): MarkdownNode | undefined => {
+    if (!isValidElement(child)) {
+        return undefined;
     }
 
-    const prevStart = prev.position.start;
-    const nextStart = next.position.start;
-    const prevEnd = prev.position.end;
-    const nextEnd = next.position.end;
+    return (child.props as { node?: MarkdownNode }).node;
+};
 
+const Ol = (props: WithNode<JSX.IntrinsicElements["ol"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
     return (
-        prevStart?.line === nextStart?.line &&
-        prevStart?.column === nextStart?.column &&
-        prevEnd?.line === nextEnd?.line &&
-        prevEnd?.column === nextEnd?.column
+        <ol
+            class={cn("sd-md-ol", localProps.class)}
+            data-streamdown="ordered-list"
+            {...restProps}
+        >
+            {localProps.children}
+        </ol>
     );
-}
+};
 
-// Shared comparators
-function sameClassAndNode(
-    prev: { className?: string; node?: MarkdownNode },
-    next: { className?: string; node?: MarkdownNode },
-) {
+const Li = (props: WithNode<JSX.IntrinsicElements["li"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
     return (
-        prev.className === next.className &&
-        sameNodePosition(prev.node, next.node)
+        <li
+            class={cn("sd-md-li", localProps.class)}
+            data-streamdown="list-item"
+            {...restProps}
+        >
+            {localProps.children}
+        </li>
     );
-}
+};
+
+const Ul = (props: WithNode<JSX.IntrinsicElements["ul"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <ul
+            class={cn("sd-md-ul", localProps.class)}
+            data-streamdown="unordered-list"
+            {...restProps}
+        >
+            {localProps.children}
+        </ul>
+    );
+};
+
+const Hr = (props: WithNode<JSX.IntrinsicElements["hr"]>) => {
+    const [localProps, restProps] = splitProps(props, ["class", "node"]);
+    const cn = useCn();
+    return (
+        <hr
+            class={cn("sd-md-hr", localProps.class)}
+            data-streamdown="horizontal-rule"
+            {...restProps}
+        />
+    );
+};
+
+const Strong = (props: WithNode<JSX.IntrinsicElements["span"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <span
+            class={cn("sd-md-strong", localProps.class)}
+            data-streamdown="strong"
+            {...restProps}
+        >
+            {localProps.children}
+        </span>
+    );
+};
+
+const H1 = (props: WithNode<JSX.IntrinsicElements["h1"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <h1
+            class={cn("sd-md-h1", localProps.class)}
+            data-streamdown="heading-1"
+            {...restProps}
+        >
+            {localProps.children}
+        </h1>
+    );
+};
+
+const H2 = (props: WithNode<JSX.IntrinsicElements["h2"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <h2
+            class={cn("sd-md-h2", localProps.class)}
+            data-streamdown="heading-2"
+            {...restProps}
+        >
+            {localProps.children}
+        </h2>
+    );
+};
+
+const H3 = (props: WithNode<JSX.IntrinsicElements["h3"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <h3
+            class={cn("sd-md-h3", localProps.class)}
+            data-streamdown="heading-3"
+            {...restProps}
+        >
+            {localProps.children}
+        </h3>
+    );
+};
+
+const H4 = (props: WithNode<JSX.IntrinsicElements["h4"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <h4
+            class={cn("sd-md-h4", localProps.class)}
+            data-streamdown="heading-4"
+            {...restProps}
+        >
+            {localProps.children}
+        </h4>
+    );
+};
+
+const H5 = (props: WithNode<JSX.IntrinsicElements["h5"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <h5
+            class={cn("sd-md-h5", localProps.class)}
+            data-streamdown="heading-5"
+            {...restProps}
+        >
+            {localProps.children}
+        </h5>
+    );
+};
+
+const H6 = (props: WithNode<JSX.IntrinsicElements["h6"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <h6
+            class={cn("sd-md-h6", localProps.class)}
+            data-streamdown="heading-6"
+            {...restProps}
+        >
+            {localProps.children}
+        </h6>
+    );
+};
+
+const Thead = (props: WithNode<JSX.IntrinsicElements["thead"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <thead
+            class={cn("sd-md-thead", localProps.class)}
+            data-streamdown="table-header"
+            {...restProps}
+        >
+            {localProps.children}
+        </thead>
+    );
+};
+
+const Tbody = (props: WithNode<JSX.IntrinsicElements["tbody"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <tbody
+            class={cn("sd-md-tbody", localProps.class)}
+            data-streamdown="table-body"
+            {...restProps}
+        >
+            {localProps.children}
+        </tbody>
+    );
+};
+
+const Tr = (props: WithNode<JSX.IntrinsicElements["tr"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <tr
+            class={cn("sd-md-tr", localProps.class)}
+            data-streamdown="table-row"
+            {...restProps}
+        >
+            {localProps.children}
+        </tr>
+    );
+};
+
+const Th = (props: WithNode<JSX.IntrinsicElements["th"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <th
+            class={cn("sd-md-th", localProps.class)}
+            data-streamdown="table-header-cell"
+            {...restProps}
+        >
+            {localProps.children}
+        </th>
+    );
+};
+
+const Td = (props: WithNode<JSX.IntrinsicElements["td"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <td
+            class={cn("sd-md-td", localProps.class)}
+            data-streamdown="table-cell"
+            {...restProps}
+        >
+            {localProps.children}
+        </td>
+    );
+};
+
+const Blockquote = (props: WithNode<JSX.IntrinsicElements["blockquote"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <blockquote
+            class={cn("sd-md-blockquote", localProps.class)}
+            data-streamdown="blockquote"
+            {...restProps}
+        >
+            {localProps.children}
+        </blockquote>
+    );
+};
+
+const Sup = (props: WithNode<JSX.IntrinsicElements["sup"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <sup
+            class={cn("sd-md-sup", localProps.class)}
+            data-streamdown="superscript"
+            {...restProps}
+        >
+            {localProps.children}
+        </sup>
+    );
+};
+
+const Sub = (props: WithNode<JSX.IntrinsicElements["sub"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const cn = useCn();
+    return (
+        <sub
+            class={cn("sd-md-sub", localProps.class)}
+            data-streamdown="subscript"
+            {...restProps}
+        >
+            {localProps.children}
+        </sub>
+    );
+};
 
 const shouldShowControls = (
     config: ControlsConfig,
     type: "table" | "code" | "mermaid",
-) => {
+): boolean => {
     if (typeof config === "boolean") {
         return config;
     }
@@ -172,120 +489,31 @@ const shouldShowMermaidControl = (
     return mermaidConfig[controlType] !== false;
 };
 
-type OlProps = WithNode<JSX.IntrinsicElements["ol"]>;
-const MemoOl = memo<OlProps>(
-    ({ children, className, node, ...props }: OlProps) => {
-        const cn = useCn();
-        return (
-            <ol
-                class={cn("sd-md-ol", className)}
-                data-streamdown="ordered-list"
-                {...props}
-            >
-                {children}
-            </ol>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoOl.displayName = "MarkdownOl";
-
-type LiProps = WithNode<JSX.IntrinsicElements["li"]>;
-
-const MemoLi = memo<LiProps>(
-    ({ children, className, node, ...props }: LiProps) => {
-        const cn = useCn();
-        return (
-            <li
-                class={cn("sd-md-li", className)}
-                data-streamdown="list-item"
-                {...props}
-            >
-                {children}
-            </li>
-        );
-    },
-    (p, n) => p.className === n.className && sameNodePosition(p.node, n.node),
-);
-MemoLi.displayName = "MarkdownLi";
-
-type UlProps = WithNode<JSX.IntrinsicElements["ul"]>;
-const MemoUl = memo<UlProps>(
-    ({ children, className, node, ...props }: UlProps) => {
-        const cn = useCn();
-        return (
-            <ul
-                class={cn("sd-md-ul", className)}
-                data-streamdown="unordered-list"
-                {...props}
-            >
-                {children}
-            </ul>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoUl.displayName = "MarkdownUl";
-
-type HrProps = WithNode<JSX.IntrinsicElements["hr"]>;
-const MemoHr = memo<HrProps>(
-    ({ className, node, ...props }: HrProps) => {
-        const cn = useCn();
-        return (
-            <hr
-                class={cn("sd-md-hr", className)}
-                data-streamdown="horizontal-rule"
-                {...props}
-            />
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoHr.displayName = "MarkdownHr";
-
-type StrongProps = WithNode<JSX.IntrinsicElements["span"]>;
-const MemoStrong = memo<StrongProps>(
-    ({ children, className, node, ...props }: StrongProps) => {
-        const cn = useCn();
-        return (
-            <span
-                class={cn("sd-md-strong", className)}
-                data-streamdown="strong"
-                {...props}
-            >
-                {children}
-            </span>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoStrong.displayName = "MarkdownStrong";
-
 type AProps = WithNode<JSX.IntrinsicElements["a"]> & { href?: string };
 
-const LinkComponent = ({
-    children,
-    className,
-    href,
-    node,
-    ...props
-}: AProps) => {
+const LinkComponent = (props: AProps) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "href",
+        "node",
+    ]);
     const cn = useCn();
     const { linkSafety } = useContext(StreamdownContext);
     const [isModalOpen, setIsModalOpen] = createSignal(false);
-    const isIncomplete = href === "streamdown:incomplete-link";
+    const isIncomplete = () => localProps.href === "streamdown:incomplete-link";
 
     const handleClick = async (e: MouseEvent) => {
-        if (!(linkSafety?.enabled && href) || isIncomplete) {
+        if (!(linkSafety?.enabled && localProps.href) || isIncomplete()) {
             return;
         }
 
         e.preventDefault();
 
         if (linkSafety.onLinkCheck) {
-            const isAllowed = await linkSafety.onLinkCheck(href);
+            const isAllowed = await linkSafety.onLinkCheck(localProps.href);
             if (isAllowed) {
-                window.open(href, "_blank", "noreferrer");
+                window.open(localProps.href, "_blank", "noreferrer");
                 return;
             }
         }
@@ -294,39 +522,34 @@ const LinkComponent = ({
     };
 
     const handleConfirm = () => {
-        if (href) {
-            window.open(href, "_blank", "noreferrer");
+        if (localProps.href) {
+            window.open(localProps.href, "_blank", "noreferrer");
         }
     };
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-    };
-
-    const modalProps = {
-        url: href ?? "",
+    const modalProps = createMemo(() => ({
+        url: localProps.href ?? "",
         isOpen: isModalOpen(),
-        onClose: handleCloseModal,
+        onClose: () => setIsModalOpen(false),
         onConfirm: handleConfirm,
-    };
+    }));
 
-    if (linkSafety?.enabled && href) {
+    if (linkSafety?.enabled && localProps.href) {
         return (
-            // return here
             <>
                 <button
-                    class={cn("sd-md-link-button", className)}
-                    data-incomplete={isIncomplete}
+                    class={cn("sd-md-link-button", localProps.class)}
+                    data-incomplete={isIncomplete()}
                     data-streamdown="link"
                     onClick={handleClick}
                     type="button"
                 >
-                    {children}
+                    {localProps.children}
                 </button>
                 {linkSafety.renderModal ? (
-                    linkSafety.renderModal(modalProps)
+                    linkSafety.renderModal(modalProps())
                 ) : (
-                    <LinkSafetyModal {...modalProps} />
+                    <LinkSafetyModal {...modalProps()} />
                 )}
             </>
         );
@@ -334,466 +557,207 @@ const LinkComponent = ({
 
     return (
         <a
-            class={cn("sd-md-link", className)}
-            data-incomplete={isIncomplete}
+            class={cn("sd-md-link", localProps.class)}
+            data-incomplete={isIncomplete()}
             data-streamdown="link"
-            href={href}
+            href={localProps.href}
             rel="noreferrer"
             target="_blank"
-            {...props}
+            {...restProps}
         >
-            {children}
+            {localProps.children}
         </a>
     );
 };
 
-const MemoA = memo<AProps>(
-    LinkComponent,
-    (p, n) => sameClassAndNode(p, n) && p.href === n.href,
-);
-MemoA.displayName = "MarkdownA";
+const TableComponent = (props: WithNode<JSX.IntrinsicElements["table"]>) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+    const { controls: controlsConfig } = useContext(StreamdownContext);
 
-type HeadingProps<TTag extends keyof JSX.IntrinsicElements> = WithNode<
-    JSX.IntrinsicElements[TTag]
->;
+    return (
+        <Table
+            class={localProps.class}
+            showControls={shouldShowControls(controlsConfig, "table")}
+            showCopy={shouldShowTableControl(controlsConfig, "copy")}
+            showDownload={shouldShowTableControl(controlsConfig, "download")}
+            showFullscreen={shouldShowTableControl(
+                controlsConfig,
+                "fullscreen",
+            )}
+            {...restProps}
+        >
+            {localProps.children}
+        </Table>
+    );
+};
 
-const MemoH1 = memo<HeadingProps<"h1">>(
-    ({ children, className, node, ...props }) => {
-        const cn = useCn();
+const SectionComponent = (
+    props: WithNode<JSX.IntrinsicElements["section"]>,
+) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "class",
+        "node",
+    ]);
+
+    const isFootnotesSection = "data-footnotes" in restProps;
+
+    if (!isFootnotesSection) {
         return (
-            <h1
-                class={cn("sd-md-h1", className)}
-                data-streamdown="heading-1"
-                {...props}
+            <section
+                class={localProps.class}
+                {...restProps}
             >
-                {children}
-            </h1>
+                {localProps.children}
+            </section>
         );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoH1.displayName = "MarkdownH1";
+    }
 
-const MemoH2 = memo<HeadingProps<"h2">>(
-    ({ children, className, node, ...props }) => {
-        const cn = useCn();
-        return (
-            <h2
-                class={cn("sd-md-h2", className)}
-                data-streamdown="heading-2"
-                {...props}
-            >
-                {children}
-            </h2>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoH2.displayName = "MarkdownH2";
+    const isEmptyFootnote = (listItem: JSX.Element): boolean => {
+        if (!isValidElement(listItem)) {
+            return false;
+        }
 
-const MemoH3 = memo<HeadingProps<"h3">>(
-    ({ children, className, node, ...props }) => {
-        const cn = useCn();
-        return (
-            <h3
-                class={cn("sd-md-h3", className)}
-                data-streamdown="heading-3"
-                {...props}
-            >
-                {children}
-            </h3>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoH3.displayName = "MarkdownH3";
+        const itemChildren = toArray(listItem.props.children as JSX.Element);
+        let hasContent = false;
+        let hasBackref = false;
 
-const MemoH4 = memo<HeadingProps<"h4">>(
-    ({ children, className, node, ...props }) => {
-        const cn = useCn();
-        return (
-            <h4
-                class={cn("sd-md-h4", className)}
-                data-streamdown="heading-4"
-                {...props}
-            >
-                {children}
-            </h4>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoH4.displayName = "MarkdownH4";
+        for (const itemChild of itemChildren) {
+            if (!hasRenderableValue(itemChild)) {
+                continue;
+            }
 
-const MemoH5 = memo<HeadingProps<"h5">>(
-    ({ children, className, node, ...props }) => {
-        const cn = useCn();
-        return (
-            <h5
-                class={cn("sd-md-h5", className)}
-                data-streamdown="heading-5"
-                {...props}
-            >
-                {children}
-            </h5>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoH5.displayName = "MarkdownH5";
+            if (typeof itemChild === "string") {
+                if (itemChild.trim() !== "") {
+                    hasContent = true;
+                }
+                continue;
+            }
 
-const MemoH6 = memo<HeadingProps<"h6">>(
-    ({ children, className, node, ...props }) => {
-        const cn = useCn();
-        return (
-            <h6
-                class={cn("sd-md-h6", className)}
-                data-streamdown="heading-6"
-                {...props}
-            >
-                {children}
-            </h6>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoH6.displayName = "MarkdownH6";
+            if (!isValidElement(itemChild)) {
+                hasContent = true;
+                continue;
+            }
 
-type TableComponentProps = WithNode<JSX.IntrinsicElements["table"]>;
-const MemoTable = memo<TableComponentProps>(
-    ({ children, className, node, ...props }: TableComponentProps) => {
-        const { controls: controlsConfig } = useContext(StreamdownContext);
-        const showTableControls = shouldShowControls(controlsConfig, "table");
-        const showCopy = shouldShowTableControl(controlsConfig, "copy");
-        const showDownload = shouldShowTableControl(controlsConfig, "download");
-        const showFullscreen = shouldShowTableControl(
-            controlsConfig,
-            "fullscreen",
-        );
+            if (itemChild.props?.["data-footnote-backref"] !== undefined) {
+                hasBackref = true;
+                continue;
+            }
 
-        return (
-            <Table
-                class={className}
-                showControls={showTableControls}
-                showCopy={showCopy}
-                showDownload={showDownload}
-                showFullscreen={showFullscreen}
-                {...props}
-            >
-                {children}
-            </Table>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoTable.displayName = "MarkdownTable";
+            const grandChildren = toArray(
+                itemChild.props.children as JSX.Element,
+            );
 
-type TheadProps = WithNode<JSX.IntrinsicElements["thead"]>;
-const MemoThead = memo<TheadProps>(
-    ({ children, className, node, ...props }: TheadProps) => {
-        const cn = useCn();
-        return (
-            <thead
-                class={cn("sd-md-thead", className)}
-                data-streamdown="table-header"
-                {...props}
-            >
-                {children}
-            </thead>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoThead.displayName = "MarkdownThead";
-
-type TbodyProps = WithNode<JSX.IntrinsicElements["tbody"]>;
-const MemoTbody = memo<TbodyProps>(
-    ({ children, className, node, ...props }: TbodyProps) => {
-        const cn = useCn();
-        return (
-            <tbody
-                class={cn("sd-md-tbody", className)}
-                data-streamdown="table-body"
-                {...props}
-            >
-                {children}
-            </tbody>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoTbody.displayName = "MarkdownTbody";
-
-type TrProps = WithNode<JSX.IntrinsicElements["tr"]>;
-const MemoTr = memo<TrProps>(
-    ({ children, className, node, ...props }: TrProps) => {
-        const cn = useCn();
-        return (
-            <tr
-                class={cn("sd-md-tr", className)}
-                data-streamdown="table-row"
-                {...props}
-            >
-                {children}
-            </tr>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoTr.displayName = "MarkdownTr";
-
-type ThProps = WithNode<JSX.IntrinsicElements["th"]>;
-const MemoTh = memo<ThProps>(
-    ({ children, className, node, ...props }: ThProps) => {
-        const cn = useCn();
-        return (
-            <th
-                class={cn("sd-md-th", className)}
-                data-streamdown="table-header-cell"
-                {...props}
-            >
-                {children}
-            </th>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoTh.displayName = "MarkdownTh";
-
-type TdProps = WithNode<JSX.IntrinsicElements["td"]>;
-const MemoTd = memo<TdProps>(
-    ({ children, className, node, ...props }: TdProps) => {
-        const cn = useCn();
-        return (
-            <td
-                class={cn("sd-md-td", className)}
-                data-streamdown="table-cell"
-                {...props}
-            >
-                {children}
-            </td>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoTd.displayName = "MarkdownTd";
-
-type BlockquoteProps = WithNode<JSX.IntrinsicElements["blockquote"]>;
-const MemoBlockquote = memo<BlockquoteProps>(
-    ({ children, className, node, ...props }: BlockquoteProps) => {
-        const cn = useCn();
-        return (
-            <blockquote
-                class={cn("sd-md-blockquote", className)}
-                data-streamdown="blockquote"
-                {...props}
-            >
-                {children}
-            </blockquote>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoBlockquote.displayName = "MarkdownBlockquote";
-
-type SupProps = WithNode<JSX.IntrinsicElements["sup"]>;
-const MemoSup = memo<SupProps>(
-    ({ children, className, node, ...props }: SupProps) => {
-        const cn = useCn();
-        return (
-            <sup
-                class={cn("sd-md-sup", className)}
-                data-streamdown="superscript"
-                {...props}
-            >
-                {children}
-            </sup>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoSup.displayName = "MarkdownSup";
-
-type SubProps = WithNode<JSX.IntrinsicElements["sub"]>;
-const MemoSub = memo<SubProps>(
-    ({ children, className, node, ...props }: SubProps) => {
-        const cn = useCn();
-        return (
-            <sub
-                class={cn("sd-md-sub", className)}
-                data-streamdown="subscript"
-                {...props}
-            >
-                {children}
-            </sub>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoSub.displayName = "MarkdownSub";
-
-type SectionProps = WithNode<JSX.IntrinsicElements["section"]>;
-const MemoSection = memo<SectionProps>(
-    ({ children, className, node, ...props }: SectionProps) => {
-        // Check if this is a footnotes section
-        const isFootnotesSection = "data-footnotes" in props;
-
-        if (isFootnotesSection) {
-            // Filter out empty footnote list items (those with only the backref link)
-            // This happens during streaming when footnote definitions haven't fully arrived
-
-            // Helper to check if a node is empty (only contains backref)
-            // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: "Complex footnote validation logic with multiple edge cases"
-            const isEmptyFootnote = (listItem: JSX.Element): boolean => {
-                if (!isValidElement(listItem)) {
-                    return false;
+            for (const grandChild of grandChildren) {
+                if (!hasRenderableValue(grandChild)) {
+                    continue;
                 }
 
-                const itemChildren = Array.isArray(listItem.props.children)
-                    ? listItem.props.children
-                    : [listItem.props.children];
-
-                // Check if all children are either whitespace or backref links
-                let hasContent = false;
-                let hasBackref = false;
-
-                for (const itemChild of itemChildren) {
-                    if (!itemChild) {
-                        continue;
+                if (typeof grandChild === "string") {
+                    if (grandChild.trim() !== "") {
+                        hasContent = true;
+                        break;
                     }
-
-                    if (typeof itemChild === "string") {
-                        // If there's non-whitespace text, it has content
-                        if (itemChild.trim() !== "") {
-                            hasContent = true;
-                        }
-                    } else if (isValidElement(itemChild)) {
-                        // Check if it's a backref link
-                        if (
-                            itemChild.props?.["data-footnote-backref"] !==
-                            undefined
-                        ) {
-                            hasBackref = true;
-                        } else {
-                            // It's some other element (like <p>), which means it has content
-                            // But we need to check if the <p> has actual content
-                            const grandChildren = Array.isArray(
-                                itemChild.props.children,
-                            )
-                                ? itemChild.props.children
-                                : [itemChild.props.children];
-
-                            for (const grandChild of grandChildren) {
-                                if (
-                                    typeof grandChild === "string" &&
-                                    grandChild.trim() !== ""
-                                ) {
-                                    hasContent = true;
-                                    break;
-                                }
-                                if (
-                                    isValidElement(grandChild) &&
-                                    grandChild.props?.[
-                                        "data-footnote-backref"
-                                    ] === undefined
-                                ) {
-                                    // If it's not a backref link, it's content
-                                    hasContent = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    continue;
                 }
 
-                // It's empty if it only has a backref and no other content
-                return hasBackref && !hasContent;
-            };
+                if (
+                    isValidElement(grandChild) &&
+                    grandChild.props?.["data-footnote-backref"] !== undefined
+                ) {
+                    hasBackref = true;
+                    continue;
+                }
 
-            // Process children to filter out empty footnotes
-            const processedChildren = Array.isArray(children)
-                ? children.map((child) => {
-                      if (!isValidElement(child)) {
-                          return child;
-                      }
+                hasContent = true;
+                break;
+            }
+        }
 
-                      // If this is an <ol> containing footnote list items
-                      if (child.type === MemoOl) {
-                          const listChildren = Array.isArray(
-                              child.props.children,
-                          )
-                              ? child.props.children
-                              : [child.props.children];
+        return hasBackref && !hasContent;
+    };
 
-                          const filteredListChildren = listChildren.filter(
-                              (listItem: JSX.Element) =>
-                                  !isEmptyFootnote(listItem),
-                          );
+    const processedChildren = createMemo(() => {
+        return toArray(localProps.children).map((child) => {
+            if (!isValidElement(child)) {
+                return child;
+            }
 
-                          // If all footnotes are empty, return null
-                          if (filteredListChildren.length === 0) {
-                              return null;
-                          }
+            const childNode = getChildNode(child);
+            const tagName = childNode?.tagName;
 
-                          // Clone the <ol> with filtered children
-                          return {
-                              ...child,
-                              props: {
-                                  ...child.props,
-                                  children: filteredListChildren,
-                              },
-                          };
-                      }
+            if (tagName !== "ol") {
+                return child;
+            }
 
-                      return child;
-                  })
-                : children;
+            const listChildren = toArray(child.props.children as JSX.Element);
+            const filteredListChildren = listChildren.filter(
+                (listItem) => !isEmptyFootnote(listItem),
+            );
 
-            // Check if we filtered out all content
-            const hasAnyContent = Array.isArray(processedChildren)
-                ? processedChildren.some((child) => child !== null)
-                : processedChildren !== null;
-
-            if (!hasAnyContent) {
+            if (filteredListChildren.length === 0) {
                 return null;
             }
 
             return (
-                <section
-                    class={className}
-                    {...props}
-                >
-                    {processedChildren}
-                </section>
+                <Ol {...(child.props as WithNode<JSX.IntrinsicElements["ol"]>)}>
+                    {filteredListChildren}
+                </Ol>
             );
-        }
+        });
+    });
 
-        // For non-footnotes sections, render normally
-        return (
-            <section
-                class={className}
-                {...props}
-            >
-                {children}
-            </section>
-        );
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoSection.displayName = "MarkdownSection";
+    const hasAnyContent = createMemo(() =>
+        processedChildren().some((child) => child !== null),
+    );
 
-const CodeComponent = ({
-    node,
-    className,
-    children,
-    ...props
-}: JSX.HTMLAttributes<HTMLElement> &
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: "Code component handles multiple rendering paths for inline code, code blocks, and mermaid diagrams"
-    ExtraProps & { "data-block"?: string }) => {
+    if (!hasAnyContent()) {
+        return null;
+    }
+
+    return (
+        <section
+            class={localProps.class}
+            {...restProps}
+        >
+            {processedChildren()}
+        </section>
+    );
+};
+
+const extractCodeText = (children: JSX.Element): string => {
+    if (
+        isValidElement(children) &&
+        typeof children.props === "object" &&
+        typeof children.props.children === "string"
+    ) {
+        return children.props.children;
+    }
+
+    if (typeof children === "string") {
+        return children;
+    }
+
+    return "";
+};
+
+const CodeComponent = (
+    props: JSX.HTMLAttributes<HTMLElement> &
+        ExtraProps & {
+            "data-block"?: string;
+        },
+) => {
+    const [localProps, restProps] = splitProps(props, [
+        "node",
+        "class",
+        "children",
+    ]);
     const cn = useCn();
-    // A code element is block-level when it was inside a <pre> element.
-    // The custom pre component marks its children with data-block.
-    const inline = !("data-block" in props);
+    const inline = !("data-block" in restProps);
     const {
         mermaid: mermaidContext,
         controls: controlsConfig,
@@ -802,68 +766,72 @@ const CodeComponent = ({
     const mermaidPlugin = useMermaidPlugin();
     const isBlockIncomplete = useIsCodeFenceIncomplete();
 
-    const match = className?.match(LANGUAGE_REGEX);
-    const language = match?.at(1) ?? "";
-    const customRenderer = useCustomRenderer(language);
+    const language = createMemo(() => {
+        const match = localProps.class?.match(LANGUAGE_REGEX);
+        return match?.at(1) ?? "";
+    });
+
+    const customRenderer = createMemo(() => useCustomRenderer(language()));
 
     if (inline) {
         return (
             <code
-                class={cn("sd-md-inline-code", className)}
+                class={cn("sd-md-inline-code", localProps.class)}
                 data-streamdown="inline-code"
-                {...props}
+                {...restProps}
             >
-                {children}
+                {localProps.children}
             </code>
         );
     }
 
-    // Parse startLine from the code fence meta string (e.g. ```js startLine=10)
-    const metastring = node?.properties?.metastring;
-    const startLineMatch = metastring?.match(START_LINE_PATTERN);
-    const parsedStartLine = startLineMatch
-        ? Number.parseInt(startLineMatch[1], 10)
-        : undefined;
-    const startLine =
-        parsedStartLine !== undefined && parsedStartLine >= 1
-            ? parsedStartLine
-            : undefined;
+    const metastring = createMemo(() => {
+        const value = localProps.node?.properties?.metastring;
+        return typeof value === "string" ? value : undefined;
+    });
 
-    // Parse noLineNumbers from meta string and derive effective lineNumbers
-    const metaNoLineNumbers = metastring
-        ? NO_LINE_NUMBERS_PATTERN.test(metastring)
-        : false;
-    const showLineNumbers = !metaNoLineNumbers && contextLineNumbers !== false;
+    const startLine = createMemo(() => {
+        const value = metastring();
+        const startLineMatch = value?.match(START_LINE_PATTERN);
+        const startLineValue = startLineMatch?.[1];
 
-    // Extract code content from children safely
-    let code = "";
-    if (
-        isValidElement(children) &&
-        children.props &&
-        typeof children.props === "object" &&
-        "children" in children.props &&
-        typeof children.props.children === "string"
-    ) {
-        code = children.props.children;
-    } else if (typeof children === "string") {
-        code = children;
-    }
+        if (!startLineValue) {
+            return undefined;
+        }
 
-    if (customRenderer) {
-        const CustomComponent = customRenderer.component;
+        const parsedStartLine = Number.parseInt(startLineValue, 10);
+
+        return parsedStartLine >= 1 ? parsedStartLine : undefined;
+    });
+
+    const showLineNumbers = createMemo(() => {
+        const metaNoLineNumbers = metastring()
+            ? NO_LINE_NUMBERS_PATTERN.test(metastring() ?? "")
+            : false;
+
+        return !metaNoLineNumbers && contextLineNumbers !== false;
+    });
+
+    const code = createMemo(() => extractCodeText(localProps.children));
+
+    if (customRenderer()) {
+        const CustomComponent = customRenderer()?.component;
+
         return (
             <Suspense fallback={<CodeBlockSkeleton />}>
-                <CustomComponent
-                    code={code}
-                    isIncomplete={isBlockIncomplete}
-                    language={language}
-                    meta={metastring}
-                />
+                {CustomComponent ? (
+                    <CustomComponent
+                        code={code()}
+                        isIncomplete={isBlockIncomplete}
+                        language={language()}
+                        meta={metastring()}
+                    />
+                ) : null}
             </Suspense>
         );
     }
 
-    if (language === "mermaid" && mermaidPlugin) {
+    if (language() === "mermaid" && mermaidPlugin) {
         const showMermaidControls = shouldShowControls(
             controlsConfig,
             "mermaid",
@@ -881,14 +849,13 @@ const CodeComponent = ({
             controlsConfig,
             "panZoom",
         );
-
         const shouldShowMermaidControls =
             showMermaidControls && (showDownload || showCopy || showFullscreen);
 
         return (
             <Suspense fallback={<CodeBlockSkeleton />}>
                 <div
-                    class={cn("sd-mermaid-block", className)}
+                    class={cn("sd-mermaid-block", localProps.class)}
                     data-streamdown="mermaid-block"
                 >
                     <div class={cn("sd-mermaid-block-header")}>
@@ -904,16 +871,16 @@ const CodeComponent = ({
                             >
                                 {showDownload ? (
                                     <MermaidDownloadDropdown
-                                        chart={code}
+                                        chart={code()}
                                         config={mermaidContext?.config}
                                     />
                                 ) : null}
                                 {showCopy ? (
-                                    <CodeBlockCopyButton code={code} />
+                                    <CodeBlockCopyButton code={code()} />
                                 ) : null}
                                 {showFullscreen ? (
                                     <MermaidFullscreenButton
-                                        chart={code}
+                                        chart={code()}
                                         config={mermaidContext?.config}
                                     />
                                 ) : null}
@@ -922,7 +889,7 @@ const CodeComponent = ({
                     ) : null}
                     <div class={cn("sd-mermaid-content")}>
                         <Mermaid
-                            chart={code}
+                            chart={code()}
                             config={mermaidContext?.config}
                             showControls={showPanZoomControls}
                         />
@@ -938,117 +905,98 @@ const CodeComponent = ({
 
     return (
         <CodeBlock
-            class={className}
-            code={code}
+            class={localProps.class}
+            code={code()}
             isIncomplete={isBlockIncomplete}
-            language={language}
-            lineNumbers={showLineNumbers}
-            startLine={startLine}
+            language={language()}
+            lineNumbers={showLineNumbers()}
+            startLine={startLine()}
         >
             {showCodeControls ? (
                 <>
                     {showDownload ? (
                         <CodeBlockDownloadButton
-                            code={code}
-                            language={language}
+                            code={code()}
+                            language={language()}
                         />
                     ) : null}
-                    {showCopy ? <CodeBlockCopyButton /> : null}
+                    {showCopy ? <CodeBlockCopyButton code={code()} /> : null}
                 </>
             ) : null}
         </CodeBlock>
     );
 };
 
-const MemoCode = memo<JSX.HTMLAttributes<HTMLElement> & ExtraProps>(
-    CodeComponent,
-    (p, n) => p.className === n.className && sameNodePosition(p.node, n.node),
-);
-MemoCode.displayName = "MarkdownCode";
+const ParagraphComponent = (props: WithNode<JSX.IntrinsicElements["p"]>) => {
+    const [localProps, restProps] = splitProps(props, ["children", "node"]);
 
-const MemoImg = memo<JSX.ImgHTMLAttributes<HTMLImageElement> & ExtraProps>(
-    ImageComponent,
-    (p, n) => p.className === n.className && sameNodePosition(p.node, n.node),
-);
+    const validChildren = createMemo(() =>
+        toArray(localProps.children).filter(hasRenderableValue),
+    );
 
-MemoImg.displayName = "MarkdownImg";
+    if (validChildren().length === 1) {
+        const onlyChild = validChildren()[0];
+        const node = getChildNode(onlyChild);
 
-type ParagraphProps = WithNode<JSX.IntrinsicElements["p"]>;
-const MemoParagraph = memo<ParagraphProps>(
-    ({ children, node, ...props }: ParagraphProps) => {
-        // Check if the paragraph contains only an image element
-        // If so, render the image directly without the <p> wrapper to avoid hydration errors
-        // (since our ImageComponent returns a <div>, which cannot be nested inside <p>)
-
-        // Handle both array and single child cases
-        const childArray = Array.isArray(children) ? children : [children];
-
-        // Filter out null/undefined/empty values
-        const validChildren = childArray.filter(
-            (child) => child !== null && child !== undefined && child !== "",
-        );
-
-        // Check if there's exactly one child and it's a block-level element
-        // (image or block code) to avoid wrapping in <p> which causes hydration errors
-        if (validChildren.length === 1 && isValidElement(validChildren[0])) {
-            const node = (validChildren[0].props as { node?: MarkdownNode })
-                .node;
-            const tagName = node?.tagName;
-
-            // Image: renders as <div>, cannot be nested in <p>
-            if (tagName === "img") {
-                return <>{children}</>;
-            }
-
-            // Block code: renders as <div>, cannot be nested in <p>
-            // Check if it's block code via the data-block marker set by the pre component
-            if (tagName === "code") {
-                const childProps = validChildren[0].props as Record<
-                    string,
-                    unknown
-                >;
-                if ("data-block" in childProps) {
-                    return <>{children}</>;
-                }
-            }
+        if (node?.tagName === "img") {
+            return <>{localProps.children}</>;
         }
 
-        return <p {...props}>{children}</p>;
-    },
-    (p, n) => sameClassAndNode(p, n),
-);
-MemoParagraph.displayName = "MarkdownParagraph";
+        if (node?.tagName === "code" && isValidElement(onlyChild)) {
+            const childProps = onlyChild.props as Record<string, unknown>;
+            if ("data-block" in childProps) {
+                return <>{localProps.children}</>;
+            }
+        }
+    }
+
+    return <p {...restProps}>{localProps.children}</p>;
+};
+
+const PreComponent = (props: WithNode<JSX.IntrinsicElements["pre"]>) => {
+    const [localProps] = splitProps(props, ["children"]);
+    const children = localProps.children;
+
+    if (!isValidElement(children)) {
+        return <>{children}</>;
+    }
+
+    const childProps = children.props as JSX.HTMLAttributes<HTMLElement> &
+        ExtraProps;
+
+    return (
+        <CodeComponent
+            {...childProps}
+            data-block="true"
+        />
+    );
+};
 
 export const components: Options["components"] = {
-    ol: MemoOl,
-    li: MemoLi,
-    ul: MemoUl,
-    hr: MemoHr,
-    strong: MemoStrong,
-    a: MemoA,
-    h1: MemoH1,
-    h2: MemoH2,
-    h3: MemoH3,
-    h4: MemoH4,
-    h5: MemoH5,
-    h6: MemoH6,
-    table: MemoTable,
-    thead: MemoThead,
-    tbody: MemoTbody,
-    tr: MemoTr,
-    th: MemoTh,
-    td: MemoTd,
-    blockquote: MemoBlockquote,
-    code: MemoCode,
-    img: MemoImg,
-    pre: ({ children }) => {
-        if (isValidElement(children)) {
-            return cloneElement(children, { "data-block": "true" });
-        }
-        return children;
-    },
-    sup: MemoSup,
-    sub: MemoSub,
-    p: MemoParagraph,
-    section: MemoSection,
+    ol: Ol,
+    li: Li,
+    ul: Ul,
+    hr: Hr,
+    strong: Strong,
+    a: LinkComponent,
+    h1: H1,
+    h2: H2,
+    h3: H3,
+    h4: H4,
+    h5: H5,
+    h6: H6,
+    table: TableComponent,
+    thead: Thead,
+    tbody: Tbody,
+    tr: Tr,
+    th: Th,
+    td: Td,
+    blockquote: Blockquote,
+    code: CodeComponent,
+    img: ImageComponent,
+    pre: PreComponent,
+    sup: Sup,
+    sub: Sub,
+    p: ParagraphComponent,
+    section: SectionComponent,
 };

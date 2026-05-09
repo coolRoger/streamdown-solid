@@ -1,5 +1,11 @@
-import { createEffect, createSignal, onCleanup, useContext } from "solid-js";
 import type { JSX } from "solid-js";
+import {
+    createEffect,
+    createSignal,
+    onCleanup,
+    splitProps,
+    useContext,
+} from "solid-js";
 import { Portal } from "solid-js/web";
 import { StreamdownContext } from "../../index";
 import { useIcons } from "../icon-context";
@@ -12,17 +18,18 @@ import { TableDownloadDropdown } from "./download-dropdown";
 
 interface TableFullscreenButtonProps {
     children: JSX.Element;
-    className?: string;
+    class?: string;
     showCopy?: boolean;
     showDownload?: boolean;
 }
 
-export const TableFullscreenButton = ({
-    children,
-    className,
-    showCopy = true,
-    showDownload = true,
-}: TableFullscreenButtonProps) => {
+export const TableFullscreenButton = (props: TableFullscreenButtonProps) => {
+    const [localProps] = splitProps(props, [
+        "children",
+        "class",
+        "showCopy",
+        "showDownload",
+    ]);
     const { Maximize2Icon, XIcon } = useIcons();
     const cn = useCn();
     const [isFullscreen, setIsFullscreen] = createSignal(false);
@@ -58,7 +65,7 @@ export const TableFullscreenButton = ({
     return (
         <>
             <button
-                class={cn("sd-icon-button", className)}
+                class={cn("sd-icon-button", localProps.class)}
                 disabled={isAnimating}
                 onClick={handleOpen}
                 title={t.viewFullscreen}
@@ -69,7 +76,6 @@ export const TableFullscreenButton = ({
 
             {isFullscreen() ? (
                 <Portal mount={document.body}>
-                    {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: "dialog overlay needs click-to-dismiss" */}
                     <div
                         aria-label={t.viewFullscreen}
                         aria-modal="true"
@@ -83,7 +89,6 @@ export const TableFullscreenButton = ({
                         }}
                         role="dialog"
                     >
-                        {/* biome-ignore lint/a11y/noStaticElementInteractions: "div with role=presentation is used for event propagation control" */}
                         <div
                             class={cn("sd-table-fullscreen-content")}
                             onClick={(e) => e.stopPropagation()}
@@ -91,8 +96,10 @@ export const TableFullscreenButton = ({
                             role="presentation"
                         >
                             <div class={cn("sd-table-fullscreen-toolbar")}>
-                                {showCopy ? <TableCopyDropdown /> : null}
-                                {showDownload ? (
+                                {localProps.showCopy !== false ? (
+                                    <TableCopyDropdown />
+                                ) : null}
+                                {localProps.showDownload !== false ? (
                                     <TableDownloadDropdown />
                                 ) : null}
                                 <button
@@ -109,7 +116,7 @@ export const TableFullscreenButton = ({
                                     class={cn("sd-table-fullscreen-element")}
                                     data-streamdown="table"
                                 >
-                                    {children}
+                                    {localProps.children}
                                 </table>
                             </div>
                         </div>

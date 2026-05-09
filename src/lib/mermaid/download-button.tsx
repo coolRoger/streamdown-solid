@@ -1,6 +1,12 @@
 import type { MermaidConfig } from "mermaid";
-import { createSignal, onCleanup, onMount, useContext } from "solid-js";
 import type { JSX } from "solid-js";
+import {
+    createSignal,
+    onCleanup,
+    onMount,
+    splitProps,
+    useContext,
+} from "solid-js";
 import { StreamdownContext } from "../../index";
 import { useIcons } from "../icon-context";
 import { useMermaidPlugin } from "../plugin-context";
@@ -13,20 +19,23 @@ import { svgToPngBlob } from "./utils";
 interface MermaidDownloadDropdownProps {
     chart: string;
     children?: JSX.Element;
-    className?: string;
+    class?: string;
     config?: MermaidConfig;
     onDownload?: (format: "mmd" | "png" | "svg") => void;
     onError?: (error: Error) => void;
 }
 
-export const MermaidDownloadDropdown = ({
-    chart,
-    children,
-    className,
-    onDownload,
-    config,
-    onError,
-}: MermaidDownloadDropdownProps) => {
+export const MermaidDownloadDropdown = (
+    props: MermaidDownloadDropdownProps,
+) => {
+    const [localProps] = splitProps(props, [
+        "chart",
+        "children",
+        "class",
+        "onDownload",
+        "config",
+        "onError",
+    ]);
     const cn = useCn();
     const [isOpen, setIsOpen] = createSignal(false);
     let dropdownRef: HTMLDivElement | undefined;
@@ -41,31 +50,30 @@ export const MermaidDownloadDropdown = ({
                 // Download as Mermaid source code
                 const filename = "diagram.mmd";
                 const mimeType = "text/plain";
-                save(filename, chart, mimeType);
+                save(filename, localProps.chart, mimeType);
                 setIsOpen(false);
-                onDownload?.(format);
+                localProps.onDownload?.(format);
                 return;
             }
 
             if (!mermaidPlugin) {
-                onError?.(new Error("Mermaid plugin not available"));
+                localProps.onError?.(new Error("Mermaid plugin not available"));
                 return;
             }
 
-            const mermaid = mermaidPlugin.getMermaid(config);
+            const mermaid = mermaidPlugin.getMermaid(localProps.config);
 
             // Use a stable ID based on chart content hash and timestamp to ensure uniqueness
-            const chartHash = chart.split("").reduce((acc, char) => {
-                // biome-ignore lint/suspicious/noBitwiseOperators: "Required for Mermaid"
+            const chartHash = localProps.chart.split("").reduce((acc, char) => {
                 return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
             }, 0);
             const uniqueId = `mermaid-${Math.abs(chartHash)}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-            const { svg } = await mermaid.render(uniqueId, chart);
+            const { svg } = await mermaid.render(uniqueId, localProps.chart);
             // For SVG and PNG, we need to extract the rendered SVG
 
             if (!svg) {
-                onError?.(
+                localProps.onError?.(
                     new Error(
                         "SVG not found. Please wait for the diagram to render.",
                     ),
@@ -78,19 +86,19 @@ export const MermaidDownloadDropdown = ({
                 const mimeType = "image/svg+xml";
                 save(filename, svg, mimeType);
                 setIsOpen(false);
-                onDownload?.(format);
+                localProps.onDownload?.(format);
                 return;
             }
 
             if (format === "png") {
                 const blob = await svgToPngBlob(svg);
                 save("diagram.png", blob, "image/png");
-                onDownload?.(format);
+                localProps.onDownload?.(format);
                 setIsOpen(false);
                 return;
             }
         } catch (error) {
-            onError?.(error as Error);
+            localProps.onError?.(error as Error);
         }
     };
 
@@ -114,13 +122,13 @@ export const MermaidDownloadDropdown = ({
             ref={dropdownRef}
         >
             <button
-                class={cn("sd-icon-button", className)}
+                class={cn("sd-icon-button", localProps.class)}
                 disabled={isAnimating}
                 onClick={() => setIsOpen(!isOpen())}
                 title={t.downloadDiagram}
                 type="button"
             >
-                {children ?? <icons.DownloadIcon size={14} />}
+                {localProps.children ?? <icons.DownloadIcon size={14} />}
             </button>
             {isOpen() ? (
                 <div class={cn("sd-dropdown-menu")}>
