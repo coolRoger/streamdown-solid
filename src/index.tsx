@@ -101,6 +101,8 @@ export {
 export type { StreamdownTranslations } from "./lib/translations-context";
 export { defaultTranslations } from "./lib/translations-context";
 
+import remend, { type RemendOptions } from "./plugins/remend";
+
 // Patterns for HTML indentation normalization
 // Matches if content starts with an HTML tag (possibly with leading whitespace)
 const HTML_BLOCK_START_PATTERN = /^[ \t]*<[\w!/?-]/;
@@ -233,9 +235,6 @@ export type StreamdownProps = Options & {
 };
 
 const memo = <T,>(component: T, _compare?: unknown): T => component;
-export type RemendOptions = Record<string, unknown>;
-
-const remend = (content: string, _options?: RemendOptions): string => content;
 
 const prefixClassValue = (value: ClassValue, prefix?: string): ClassValue => {
     if (!prefix || !value) {
@@ -461,7 +460,7 @@ export const Block = memo(
     },
 );
 
-export const Streamdown = memo(
+export const StreamdownSolidJS = memo(
     (props: StreamdownProps) => {
         const [localProps, restProps] = splitProps(props, [
             "children",
