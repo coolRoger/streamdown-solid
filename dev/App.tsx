@@ -1,6 +1,5 @@
 import type { Component } from "solid-js";
 import { StreamdownSolidJS } from "src";
-import "src/styles.css";
 import styles from "./App.module.css";
 import logo from "./logo.svg";
 
