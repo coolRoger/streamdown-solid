@@ -1,8 +1,8 @@
 <p>
-  <img width="100%" src="https://assets.solidjs.com/banner?type=streamdown-solid&background=tiles&project=%20" alt="streamdown-solid">
+  <img width="100%" src="https://assets.solidjs.com/banner?type=streamdown-solidjs&background=tiles&project=%20" alt="streamdown-solidjs">
 </p>
 
-# streamdown-solid
+# streamdown-solidjs
 
 [![pnpm](https://img.shields.io/badge/maintained%20with-pnpm-cc00ff.svg?style=for-the-badge&logo=pnpm)](https://pnpm.io/)
 
@@ -14,15 +14,15 @@ Streamdown components for Solid.js
 Install it:
 
 ```bash
-npm i streamdown-solid
+npm i streamdown-solidjs
 # or
-yarn add streamdown-solid
+yarn add streamdown-solidjs
 # or
-pnpm add streamdown-solid
+pnpm add streamdown-solidjs
 ```
 
 Use it:
 
 ```tsx
-import streamdown-solid from 'streamdown-solid'
+import { StreamdownSolid } from 'streamdown-solidjs'
 ```

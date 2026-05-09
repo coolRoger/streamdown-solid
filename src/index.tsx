@@ -460,7 +460,7 @@ export const Block = memo(
     },
 );
 
-export const StreamdownSolidJS = memo(
+export const StreamdownSolid = memo(
     (props: StreamdownProps) => {
         const [localProps, restProps] = splitProps(props, [
             "children",
