@@ -42,14 +42,25 @@ export default defineConfig((config) => {
 
     const tsupOptions = preset.generateTsupOptions(parsed_options);
     const forceBundledDeps = [
+        /.*/,
         "hast-util-to-jsx-runtime",
         "style-to-js",
         "inline-style-parser",
+    ];
+    const forceExternalDeps = [
+        "solid-js",
+        "solid-js/web",
+        "solid-js/h",
+        "solid-js/h/jsx-runtime",
+        "solid-js/store",
     ];
     const applyNoExternal = (options: any) => ({
         ...options,
         noExternal: Array.from(
             new Set([...(options.noExternal ?? []), ...forceBundledDeps]),
+        ),
+        external: Array.from(
+            new Set([...(options.external ?? []), ...forceExternalDeps]),
         ),
     });
 
