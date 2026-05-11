@@ -6,6 +6,9 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import {
+    For,
+    Match,
+    Switch,
     type Component,
     createComponent,
     createContext,
@@ -366,7 +369,7 @@ export const Block = (props: BlockProps) => {
     // so it can skip their animation (duration=0ms) on this render pass.
     //
     // getLastRenderCharCount() returns the char count from the PREVIOUS
-    // rehype run then resets to 0. React renders depth-first: this Block's
+    // rehype run then resets to 0. Renders depth-first: this Block's
     // body runs, then its child Markdown calls processor.runSync (which
     // runs rehypeAnimate synchronously). So the value here is from the
     // previous render — exactly what we need as prevContentLength.
@@ -387,16 +390,16 @@ export const Block = (props: BlockProps) => {
 
     return (
         <BlockIncompleteContext.Provider value={localProps.isIncomplete}>
-            {localProps.dir ? (
-                <div
-                    dir={localProps.dir}
-                    style={{ display: "contents" }}
-                >
-                    {inner}
-                </div>
-            ) : (
-                inner
-            )}
+            <Switch fallback={inner}>
+                <Match when={localProps.dir}>
+                    <div
+                        dir={localProps.dir}
+                        style={{ display: "contents" }}
+                    >
+                        {inner}
+                    </div>
+                </Match>
+            </Switch>
         </BlockIncompleteContext.Provider>
     );
 };
@@ -555,7 +558,6 @@ export const StreamdownSolid = (props: StreamdownProps) => {
 
     // Generate stable keys based on index only
     // Don't use content hash - that causes unmount/remount when content changes
-    // React will handle content updates via props changes and memo comparison
     // Stable key derived from animated option values. This prevents the
     // plugin from being recreated when the user passes an inline object
     // literal (e.g. animated={{ animation: 'fadeIn' }}) whose reference
@@ -580,7 +582,6 @@ export const StreamdownSolid = (props: StreamdownProps) => {
         return createAnimatePlugin(localProps.animated as AnimateOptions);
     });
 
-    // Combined context value - single object reduces React tree overhead
     const contextValue = createMemo<StreamdownContextType>(() => ({
         shikiTheme: localProps.plugins?.code?.getThemes() ?? shikiTheme,
         controls,
@@ -711,97 +712,100 @@ export const StreamdownSolid = (props: StreamdownProps) => {
             : undefined,
     );
 
-    // Static mode: simple rendering without streaming features
-    if (mode === "static") {
-        return (
-            <TranslationsContext.Provider value={translationsValue()}>
-                <PluginContext.Provider value={localProps.plugins ?? null}>
-                    <StreamdownContext.Provider value={contextValue()}>
-                        <IconProvider icons={iconOverrides}>
-                            <PrefixContext.Provider value={prefixedCn()}>
-                                <div
-                                    class={prefixedCn()(
-                                        "sd-streamdown-root",
-                                        localProps.class,
-                                    )}
-                                    dir={
-                                        localProps.dir === "auto"
-                                            ? detectTextDirection(
-                                                  processedChildren(),
-                                              )
-                                            : localProps.dir
-                                    }
-                                >
-                                    <Markdown
-                                        components={mergedComponents()}
-                                        rehypePlugins={mergedRehypePlugins()}
-                                        remarkPlugins={mergedRemarkPlugins()}
-                                        {...restProps}
-                                    >
-                                        {processedChildren()}
-                                    </Markdown>
-                                </div>
-                            </PrefixContext.Provider>
-                        </IconProvider>
-                    </StreamdownContext.Provider>
-                </PluginContext.Provider>
-            </TranslationsContext.Provider>
-        );
-    }
-
-    // Streaming mode: parse into blocks with memoization and incomplete markdown handling
     return (
         <TranslationsContext.Provider value={translationsValue()}>
             <PluginContext.Provider value={localProps.plugins ?? null}>
                 <StreamdownContext.Provider value={contextValue()}>
                     <IconProvider icons={iconOverrides}>
                         <PrefixContext.Provider value={prefixedCn()}>
-                            <div
-                                class={prefixedCn()(
-                                    "sd-streamdown-root",
-                                    localProps.caret && !shouldHideCaret()
-                                        ? "sd-streamdown-root--with-caret"
-                                        : null,
-                                    localProps.class,
-                                )}
-                                style={style()}
-                            >
-                                {blocksToRender().length === 0 &&
-                                    localProps.caret &&
-                                    isAnimating && <span />}
-                                {blocksToRender().map((block, index) => {
-                                    const isLastBlock =
-                                        index === blocksToRender().length - 1;
-                                    const isIncomplete =
-                                        isAnimating &&
-                                        isLastBlock &&
-                                        hasIncompleteCodeFence(block);
-                                    return (
-                                        <BlockComponent
-                                            animatePlugin={animatePlugin()}
+                            <Switch>
+                                <Match when={mode === "static"}>
+                                    <div
+                                        class={prefixedCn()(
+                                            "sd-streamdown-root",
+                                            localProps.class,
+                                        )}
+                                        dir={
+                                            localProps.dir === "auto"
+                                                ? detectTextDirection(
+                                                      processedChildren(),
+                                                  )
+                                                : localProps.dir
+                                        }
+                                    >
+                                        <Markdown
                                             components={mergedComponents()}
-                                            content={block}
-                                            dir={
-                                                blockDirections()?.[index] ??
-                                                (localProps.dir !== "auto"
-                                                    ? localProps.dir
-                                                    : undefined)
-                                            }
-                                            index={index}
-                                            isIncomplete={isIncomplete}
                                             rehypePlugins={mergedRehypePlugins()}
                                             remarkPlugins={mergedRemarkPlugins()}
-                                            shouldNormalizeHtmlIndentation={
-                                                shouldNormalizeHtmlIndentation
-                                            }
-                                            shouldParseIncompleteMarkdown={
-                                                shouldParseIncompleteMarkdown
-                                            }
                                             {...restProps}
-                                        />
-                                    );
-                                })}
-                            </div>
+                                        >
+                                            {processedChildren()}
+                                        </Markdown>
+                                    </div>
+                                </Match>
+                                <Match when={mode === "streaming"}>
+                                    <div
+                                        class={prefixedCn()(
+                                            "sd-streamdown-root",
+                                            localProps.caret && !shouldHideCaret()
+                                                ? "sd-streamdown-root--with-caret"
+                                                : null,
+                                            localProps.class,
+                                        )}
+                                        style={style()}
+                                    >
+                                        <Switch>
+                                            <Match
+                                                when={
+                                                    blocksToRender().length === 0 &&
+                                                    localProps.caret &&
+                                                    isAnimating
+                                                }
+                                            >
+                                                <span />
+                                            </Match>
+                                        </Switch>
+                                        <For each={blocksToRender()}>
+                                            {(block, index) => {
+                                                const isLastBlock =
+                                                    index() ===
+                                                    blocksToRender().length - 1;
+                                                const isIncomplete =
+                                                    isAnimating &&
+                                                    isLastBlock &&
+                                                    hasIncompleteCodeFence(block);
+                                                return (
+                                                    <BlockComponent
+                                                        animatePlugin={animatePlugin()}
+                                                        components={mergedComponents()}
+                                                        content={block}
+                                                        dir={
+                                                            blockDirections()?.[
+                                                                index()
+                                                            ] ??
+                                                            (localProps.dir !==
+                                                            "auto"
+                                                                ? localProps.dir
+                                                                : undefined)
+                                                        }
+                                                        index={index()}
+                                                        isIncomplete={isIncomplete}
+                                                        rehypePlugins={mergedRehypePlugins()}
+                                                        remarkPlugins={mergedRemarkPlugins()}
+                                                        shouldNormalizeHtmlIndentation={
+                                                            shouldNormalizeHtmlIndentation
+                                                        }
+                                                        shouldParseIncompleteMarkdown={
+                                                            shouldParseIncompleteMarkdown
+                                                        }
+                                                        {...restProps}
+                                                    />
+                                                );
+                                            }}
+                                        </For>
+                                    </div>
+                                </Match>
+                            </Switch>
                         </PrefixContext.Provider>
                     </IconProvider>
                 </StreamdownContext.Provider>
