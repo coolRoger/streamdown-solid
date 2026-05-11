@@ -43,6 +43,8 @@
     "scripts": {
         "dev": "vite serve dev",
         "build": "tsup",
+        "smoke:pack": "node ./scripts/smoke-packed.mjs",
+        "smoke:pack:serve": "node ./scripts/smoke-packed.mjs --serve",
         "test": "concurrently pnpm:test:*",
         "test:client": "vitest",
         "test:ssr": "pnpm run test:client --mode ssr",

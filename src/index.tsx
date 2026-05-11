@@ -534,7 +534,9 @@ export const StreamdownSolid = (props: StreamdownProps) => {
     // Use transition for block updates in streaming mode to avoid blocking UI
     createEffect(() => {
         const nextBlocks = blocks();
-        if (mode === "streaming" && !animatePlugin()) {
+        // Avoid referencing `animatePlugin` before it is initialized.
+        // A truthy `animated` prop always results in an animate plugin.
+        if (mode === "streaming" && !localProps.animated) {
             startTransition(() => {
                 setDisplayBlocks(nextBlocks);
             });
