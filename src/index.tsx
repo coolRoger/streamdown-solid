@@ -234,8 +234,6 @@ export type StreamdownProps = Options & {
     onAnimationEnd?: () => void;
 };
 
-const memo = <T,>(component: T, _compare?: unknown): T => component;
-
 const prefixClassValue = (value: ClassValue, prefix?: string): ClassValue => {
     if (!prefix || !value) {
         return value;
@@ -354,476 +352,367 @@ export type BlockProps = Options & {
     animatePlugin?: AnimatePlugin | null;
 };
 
-export const Block = memo(
-    (props: BlockProps) => {
-        const [localProps, restProps] = splitProps(props, [
-            "content",
-            "shouldParseIncompleteMarkdown",
-            "shouldNormalizeHtmlIndentation",
-            "index",
-            "isIncomplete",
-            "dir",
-            "animatePlugin",
-        ]);
-        // Tell the animate plugin how many HAST characters were already rendered
-        // so it can skip their animation (duration=0ms) on this render pass.
-        //
-        // getLastRenderCharCount() returns the char count from the PREVIOUS
-        // rehype run then resets to 0. React renders depth-first: this Block's
-        // body runs, then its child Markdown calls processor.runSync (which
-        // runs rehypeAnimate synchronously). So the value here is from the
-        // previous render — exactly what we need as prevContentLength.
-        if (localProps.animatePlugin) {
-            const prevCount = localProps.animatePlugin.getLastRenderCharCount();
-            localProps.animatePlugin.setPrevContentLength(prevCount);
-        }
+export const Block = (props: BlockProps) => {
+    const [localProps, restProps] = splitProps(props, [
+        "content",
+        "shouldParseIncompleteMarkdown",
+        "shouldNormalizeHtmlIndentation",
+        "index",
+        "isIncomplete",
+        "dir",
+        "animatePlugin",
+    ]);
+    // Tell the animate plugin how many HAST characters were already rendered
+    // so it can skip their animation (duration=0ms) on this render pass.
+    //
+    // getLastRenderCharCount() returns the char count from the PREVIOUS
+    // rehype run then resets to 0. React renders depth-first: this Block's
+    // body runs, then its child Markdown calls processor.runSync (which
+    // runs rehypeAnimate synchronously). So the value here is from the
+    // previous render — exactly what we need as prevContentLength.
+    if (localProps.animatePlugin) {
+        const prevCount = localProps.animatePlugin.getLastRenderCharCount();
+        localProps.animatePlugin.setPrevContentLength(prevCount);
+    }
 
-        // Note: remend is already applied to the entire markdown before parsing into blocks
-        // in the Streamdown component, so we don't need to apply it again here
-        const normalizedContent =
-            typeof localProps.content === "string" &&
-            localProps.shouldNormalizeHtmlIndentation
-                ? normalizeHtmlIndentation(localProps.content)
-                : localProps.content;
+    // Note: remend is already applied to the entire markdown before parsing into blocks
+    // in the Streamdown component, so we don't need to apply it again here
+    const normalizedContent =
+        typeof localProps.content === "string" &&
+        localProps.shouldNormalizeHtmlIndentation
+            ? normalizeHtmlIndentation(localProps.content)
+            : localProps.content;
 
-        const inner = <Markdown {...restProps}>{normalizedContent}</Markdown>;
+    const inner = <Markdown {...restProps}>{normalizedContent}</Markdown>;
 
-        return (
-            <BlockIncompleteContext.Provider value={localProps.isIncomplete}>
-                {localProps.dir ? (
-                    <div
-                        dir={localProps.dir}
-                        style={{ display: "contents" }}
-                    >
-                        {inner}
-                    </div>
-                ) : (
-                    inner
-                )}
-            </BlockIncompleteContext.Provider>
-        );
-    },
-    (prevProps: BlockProps, nextProps: BlockProps) => {
-        // Deep comparison for better memoization
-        if (prevProps.content !== nextProps.content) {
-            return false;
-        }
-        if (
-            prevProps.shouldNormalizeHtmlIndentation !==
-            nextProps.shouldNormalizeHtmlIndentation
-        ) {
-            return false;
-        }
-        if (prevProps.index !== nextProps.index) {
-            return false;
-        }
+    return (
+        <BlockIncompleteContext.Provider value={localProps.isIncomplete}>
+            {localProps.dir ? (
+                <div
+                    dir={localProps.dir}
+                    style={{ display: "contents" }}
+                >
+                    {inner}
+                </div>
+            ) : (
+                inner
+            )}
+        </BlockIncompleteContext.Provider>
+    );
+};
 
-        if (prevProps.isIncomplete !== nextProps.isIncomplete) {
-            return false;
-        }
+export const StreamdownSolid = (props: StreamdownProps) => {
+    const [localProps, restProps] = splitProps(props, [
+        "children",
+        "mode",
+        "dir",
+        "parseIncompleteMarkdown",
+        "normalizeHtmlIndentation",
+        "components",
+        "rehypePlugins",
+        "remarkPlugins",
+        "class",
+        "shikiTheme",
+        "mermaid",
+        "controls",
+        "isAnimating",
+        "animated",
+        "BlockComponent",
+        "parseMarkdownIntoBlocksFn",
+        "caret",
+        "plugins",
+        "remend",
+        "linkSafety",
+        "lineNumbers",
+        "allowedTags",
+        "literalTagContent",
+        "translations",
+        "icons",
+        "prefix",
+        "onAnimationStart",
+        "onAnimationEnd",
+    ]);
+    const mode = localProps.mode ?? "streaming";
+    const shouldParseIncompleteMarkdown =
+        localProps.parseIncompleteMarkdown ?? true;
+    const shouldNormalizeHtmlIndentation =
+        localProps.normalizeHtmlIndentation ?? false;
+    const rehypePlugins = localProps.rehypePlugins ?? defaultRehypePluginsArray;
+    const remarkPlugins = localProps.remarkPlugins ?? defaultRemarkPluginsArray;
+    const shikiTheme = localProps.shikiTheme ?? defaultShikiTheme;
+    const controls = localProps.controls ?? true;
+    const isAnimating = localProps.isAnimating ?? false;
+    const BlockComponent = localProps.BlockComponent ?? Block;
+    const parseMarkdownIntoBlocksFn =
+        localProps.parseMarkdownIntoBlocksFn ?? parseMarkdownIntoBlocks;
+    const linkSafety = localProps.linkSafety ?? defaultLinkSafetyConfig;
+    const lineNumbers = localProps.lineNumbers ?? true;
+    const iconOverrides = localProps.icons;
 
-        if (prevProps.dir !== nextProps.dir) {
-            return false;
-        }
+    // All hooks must be called before any conditional returns
+    const [_isPending, startTransition] = useTransition();
 
-        // Check if components object changed (shallow comparison)
-        if (prevProps.components !== nextProps.components) {
-            // If references differ, check if keys are the same
-            const prevKeys = Object.keys(prevProps.components || {});
-            const nextKeys = Object.keys(nextProps.components || {});
+    const prefixedCn = createMemo(() => createCn(localProps.prefix));
 
-            if (prevKeys.length !== nextKeys.length) {
-                return false;
-            }
-            if (
-                prevKeys.some(
-                    (key) =>
-                        prevProps.components?.[key] !==
-                        nextProps.components?.[key],
-                )
-            ) {
-                return false;
-            }
-        }
-
-        // Check if rehypePlugins changed (reference comparison)
-        if (prevProps.rehypePlugins !== nextProps.rehypePlugins) {
-            return false;
-        }
-
-        // Check if remarkPlugins changed (reference comparison)
-        if (prevProps.remarkPlugins !== nextProps.remarkPlugins) {
-            return false;
-        }
-
-        return true;
-    },
-);
-
-export const StreamdownSolid = memo(
-    (props: StreamdownProps) => {
-        const [localProps, restProps] = splitProps(props, [
-            "children",
-            "mode",
-            "dir",
-            "parseIncompleteMarkdown",
-            "normalizeHtmlIndentation",
-            "components",
-            "rehypePlugins",
-            "remarkPlugins",
-            "class",
-            "shikiTheme",
-            "mermaid",
-            "controls",
-            "isAnimating",
-            "animated",
-            "BlockComponent",
-            "parseMarkdownIntoBlocksFn",
-            "caret",
-            "plugins",
-            "remend",
-            "linkSafety",
-            "lineNumbers",
-            "allowedTags",
-            "literalTagContent",
-            "translations",
-            "icons",
-            "prefix",
-            "onAnimationStart",
-            "onAnimationEnd",
-        ]);
-        const mode = localProps.mode ?? "streaming";
-        const shouldParseIncompleteMarkdown =
-            localProps.parseIncompleteMarkdown ?? true;
-        const shouldNormalizeHtmlIndentation =
-            localProps.normalizeHtmlIndentation ?? false;
-        const rehypePlugins =
-            localProps.rehypePlugins ?? defaultRehypePluginsArray;
-        const remarkPlugins =
-            localProps.remarkPlugins ?? defaultRemarkPluginsArray;
-        const shikiTheme = localProps.shikiTheme ?? defaultShikiTheme;
-        const controls = localProps.controls ?? true;
-        const isAnimating = localProps.isAnimating ?? false;
-        const BlockComponent = localProps.BlockComponent ?? Block;
-        const parseMarkdownIntoBlocksFn =
-            localProps.parseMarkdownIntoBlocksFn ?? parseMarkdownIntoBlocks;
-        const linkSafety = localProps.linkSafety ?? defaultLinkSafetyConfig;
-        const lineNumbers = localProps.lineNumbers ?? true;
-        const iconOverrides = localProps.icons;
-
-        // All hooks must be called before any conditional returns
-        const [_isPending, startTransition] = useTransition();
-
-        const prefixedCn = createMemo(() => createCn(localProps.prefix));
-
-        // null means "first render" — distinguishes from false so we can fire
-        // onAnimationStart on mount when isAnimating={true} without firing
-        // onAnimationEnd on mount when isAnimating={false}.
-        let prevIsAnimating: boolean | null = null;
-        createEffect(() => {
-            if (mode === "static") {
-                return;
-            }
-
-            const prev = prevIsAnimating;
-            prevIsAnimating = isAnimating;
-
-            // First render: only fire start (never end, since there's no prior state to end)
-            if (prev === null) {
-                if (isAnimating) {
-                    localProps.onAnimationStart?.();
-                }
-                return;
-            }
-
-            if (isAnimating && !prev) {
-                localProps.onAnimationStart?.();
-            } else if (!isAnimating && prev) {
-                localProps.onAnimationEnd?.();
-            }
-        });
-
-        const allowedTagNames = createMemo(() =>
-            localProps.allowedTags ? Object.keys(localProps.allowedTags) : [],
-        );
-
-        // Apply remend to fix incomplete markdown BEFORE parsing into blocks
-        // This prevents partial list items from being interpreted as setext headings
-        const processedChildren = createMemo(() => {
-            if (typeof localProps.children !== "string") {
-                return "";
-            }
-            let result =
-                mode === "streaming" && shouldParseIncompleteMarkdown
-                    ? remend(localProps.children, localProps.remend)
-                    : localProps.children;
-
-            // Escape markdown metacharacters inside literal-tag-content tags so that
-            // children are rendered as plain text rather than parsed as markdown.
-            // This must run BEFORE preprocessCustomTags so that the HTML comments
-            // (<!---->) inserted to preserve blank lines are not themselves escaped.
-            if (
-                localProps.literalTagContent &&
-                localProps.literalTagContent.length > 0
-            ) {
-                result = preprocessLiteralTagContent(
-                    result,
-                    localProps.literalTagContent,
-                );
-            }
-
-            // Preprocess custom tags to prevent blank lines from splitting HTML blocks.
-            // Runs after preprocessLiteralTagContent so that the inserted <!---->
-            // markers are not corrupted by markdown metacharacter escaping.
-            if (allowedTagNames().length > 0) {
-                result = preprocessCustomTags(result, allowedTagNames());
-            }
-
-            return result;
-        });
-
-        const blocks = createMemo(() =>
-            parseMarkdownIntoBlocksFn(processedChildren()),
-        );
-
-        // Initialize displayBlocks with blocks to avoid hydration mismatch
-        // Previously initialized as [] which caused content to flicker on hydration
-        const [displayBlocks, setDisplayBlocks] = createSignal<string[]>(
-            blocks(),
-        );
-
-        // Use transition for block updates in streaming mode to avoid blocking UI
-        createEffect(() => {
-            const nextBlocks = blocks();
-            if (mode === "streaming" && !animatePlugin()) {
-                startTransition(() => {
-                    setDisplayBlocks(nextBlocks);
-                });
-            } else {
-                setDisplayBlocks(nextBlocks);
-            }
-        });
-
-        // Use displayBlocks for rendering to leverage useTransition
-        const blocksToRender = createMemo(() =>
-            mode === "streaming" ? displayBlocks() : blocks(),
-        );
-
-        // Pre-compute per-block text directions when dir="auto" so detection
-        // runs once per block change rather than on every render pass.
-        const blockDirections = createMemo(() =>
-            localProps.dir === "auto"
-                ? blocksToRender().map(detectTextDirection)
-                : undefined,
-        );
-
-        // Generate stable keys based on index only
-        // Don't use content hash - that causes unmount/remount when content changes
-        // React will handle content updates via props changes and memo comparison
-        // Stable key derived from animated option values. This prevents the
-        // plugin from being recreated when the user passes an inline object
-        // literal (e.g. animated={{ animation: 'fadeIn' }}) whose reference
-        // changes on every parent render.
-        const animatedKey = createMemo(() => {
-            if (localProps.animated === true) {
-                return "true";
-            }
-            if (localProps.animated) {
-                return JSON.stringify(localProps.animated);
-            }
-            return "";
-        });
-
-        const animatePlugin = createMemo(() => {
-            if (!animatedKey()) {
-                return null;
-            }
-            if (animatedKey() === "true") {
-                return createAnimatePlugin();
-            }
-            return createAnimatePlugin(localProps.animated as AnimateOptions);
-        });
-
-        // Combined context value - single object reduces React tree overhead
-        const contextValue = createMemo<StreamdownContextType>(() => ({
-            shikiTheme: localProps.plugins?.code?.getThemes() ?? shikiTheme,
-            controls,
-            isAnimating,
-            lineNumbers,
-            mode,
-            mermaid: localProps.mermaid,
-            linkSafety,
-        }));
-
-        // Stable key derived from translations values so inline objects don't
-        // defeat memoization (same pattern used for `animated` above).
-        const translationsValue = createMemo(() => ({
-            ...defaultTranslations,
-            ...localProps.translations,
-        }));
-
-        // Memoize merged components to avoid recreating on every render
-        const mergedComponents = createMemo(() => {
-            const { inlineCode, ...userComponents } =
-                localProps.components ?? {};
-
-            const merged = {
-                ...defaultComponents,
-                ...userComponents,
-            };
-
-            if (inlineCode) {
-                const BlockCode = merged.code;
-                merged.code = (
-                    codeProps: JSX.IntrinsicElements["code"] & ExtraProps,
-                ) => {
-                    const isInline = !("data-block" in codeProps);
-                    if (isInline) {
-                        return createComponent(inlineCode, codeProps);
-                    }
-                    return BlockCode
-                        ? createComponent(
-                              BlockCode as Component<any>,
-                              codeProps,
-                          )
-                        : null;
-                };
-            }
-
-            return merged;
-        });
-
-        // Merge plugin remark plugins (math, cjk)
-        // Order: CJK before -> default (remarkGfm) -> CJK after -> math
-        const mergedRemarkPlugins = createMemo(() => {
-            let result: Pluggable[] = [];
-            // CJK plugins that must run BEFORE remarkGfm (e.g., remark-cjk-friendly)
-            if (localProps.plugins?.cjk) {
-                result = [
-                    ...result,
-                    ...localProps.plugins.cjk.remarkPluginsBefore,
-                ];
-            }
-            // Default plugins (includes remarkGfm)
-            result = [...result, ...remarkPlugins];
-            // CJK plugins that must run AFTER remarkGfm (e.g., autolink boundary)
-            if (localProps.plugins?.cjk) {
-                result = [
-                    ...result,
-                    ...localProps.plugins.cjk.remarkPluginsAfter,
-                ];
-            }
-            // Math plugins
-            if (localProps.plugins?.math) {
-                result = [...result, localProps.plugins.math.remarkPlugin];
-            }
-            return result;
-        });
-
-        const mergedRehypePlugins = createMemo(() => {
-            let result = rehypePlugins;
-
-            // extend sanitization schema with allowedTags. only works with default plugins. if user provides a custom sanitize plugin, they can pass in the custom allowed tags via the plugins object.
-            if (
-                localProps.allowedTags &&
-                Object.keys(localProps.allowedTags).length > 0 &&
-                rehypePlugins === defaultRehypePluginsArray
-            ) {
-                const extendedSchema = {
-                    ...defaultSanitizeSchema,
-                    tagNames: [
-                        ...(defaultSanitizeSchema.tagNames ?? []),
-                        ...Object.keys(localProps.allowedTags),
-                    ],
-                    attributes: {
-                        ...defaultSanitizeSchema.attributes,
-                        ...localProps.allowedTags,
-                    },
-                };
-
-                result = [
-                    defaultRehypePlugins.raw!,
-                    [rehypeSanitize, extendedSchema],
-                    defaultRehypePlugins.harden!,
-                ];
-            }
-
-            if (
-                localProps.literalTagContent &&
-                localProps.literalTagContent.length > 0
-            ) {
-                result = [
-                    ...result,
-                    [rehypeLiteralTagContent, localProps.literalTagContent],
-                ];
-            }
-
-            if (localProps.plugins?.math) {
-                result = [...result, localProps.plugins.math.rehypePlugin];
-            }
-
-            if (animatePlugin() && isAnimating) {
-                result = [...result, animatePlugin()!.rehypePlugin];
-            }
-
-            return result;
-        });
-
-        const shouldHideCaret = createMemo(() => {
-            if (!isAnimating || blocksToRender().length === 0) {
-                return false;
-            }
-            const lastBlock = blocksToRender().at(-1) as string;
-            return hasIncompleteCodeFence(lastBlock) || hasTable(lastBlock);
-        });
-
-        const style = createMemo(() =>
-            localProps.caret && isAnimating && !shouldHideCaret()
-                ? ({
-                      "--streamdown-caret": `"${carets[localProps.caret]}"`,
-                  } as JSX.CSSProperties)
-                : undefined,
-        );
-
-        // Static mode: simple rendering without streaming features
+    // null means "first render" — distinguishes from false so we can fire
+    // onAnimationStart on mount when isAnimating={true} without firing
+    // onAnimationEnd on mount when isAnimating={false}.
+    let prevIsAnimating: boolean | null = null;
+    createEffect(() => {
         if (mode === "static") {
-            return (
-                <TranslationsContext.Provider value={translationsValue()}>
-                    <PluginContext.Provider value={localProps.plugins ?? null}>
-                        <StreamdownContext.Provider value={contextValue()}>
-                            <IconProvider icons={iconOverrides}>
-                                <PrefixContext.Provider value={prefixedCn()}>
-                                    <div
-                                        class={prefixedCn()(
-                                            "sd-streamdown-root",
-                                            localProps.class,
-                                        )}
-                                        dir={
-                                            localProps.dir === "auto"
-                                                ? detectTextDirection(
-                                                      processedChildren(),
-                                                  )
-                                                : localProps.dir
-                                        }
-                                    >
-                                        <Markdown
-                                            components={mergedComponents()}
-                                            rehypePlugins={mergedRehypePlugins()}
-                                            remarkPlugins={mergedRemarkPlugins()}
-                                            {...restProps}
-                                        >
-                                            {processedChildren()}
-                                        </Markdown>
-                                    </div>
-                                </PrefixContext.Provider>
-                            </IconProvider>
-                        </StreamdownContext.Provider>
-                    </PluginContext.Provider>
-                </TranslationsContext.Provider>
+            return;
+        }
+
+        const prev = prevIsAnimating;
+        prevIsAnimating = isAnimating;
+
+        // First render: only fire start (never end, since there's no prior state to end)
+        if (prev === null) {
+            if (isAnimating) {
+                localProps.onAnimationStart?.();
+            }
+            return;
+        }
+
+        if (isAnimating && !prev) {
+            localProps.onAnimationStart?.();
+        } else if (!isAnimating && prev) {
+            localProps.onAnimationEnd?.();
+        }
+    });
+
+    const allowedTagNames = createMemo(() =>
+        localProps.allowedTags ? Object.keys(localProps.allowedTags) : [],
+    );
+
+    // Apply remend to fix incomplete markdown BEFORE parsing into blocks
+    // This prevents partial list items from being interpreted as setext headings
+    const processedChildren = createMemo(() => {
+        if (typeof localProps.children !== "string") {
+            return "";
+        }
+        let result =
+            mode === "streaming" && shouldParseIncompleteMarkdown
+                ? remend(localProps.children, localProps.remend)
+                : localProps.children;
+
+        // Escape markdown metacharacters inside literal-tag-content tags so that
+        // children are rendered as plain text rather than parsed as markdown.
+        // This must run BEFORE preprocessCustomTags so that the HTML comments
+        // (<!---->) inserted to preserve blank lines are not themselves escaped.
+        if (
+            localProps.literalTagContent &&
+            localProps.literalTagContent.length > 0
+        ) {
+            result = preprocessLiteralTagContent(
+                result,
+                localProps.literalTagContent,
             );
         }
 
-        // Streaming mode: parse into blocks with memoization and incomplete markdown handling
+        // Preprocess custom tags to prevent blank lines from splitting HTML blocks.
+        // Runs after preprocessLiteralTagContent so that the inserted <!---->
+        // markers are not corrupted by markdown metacharacter escaping.
+        if (allowedTagNames().length > 0) {
+            result = preprocessCustomTags(result, allowedTagNames());
+        }
+
+        return result;
+    });
+
+    const blocks = createMemo(() =>
+        parseMarkdownIntoBlocksFn(processedChildren()),
+    );
+
+    // Initialize displayBlocks with blocks to avoid hydration mismatch
+    // Previously initialized as [] which caused content to flicker on hydration
+    const [displayBlocks, setDisplayBlocks] = createSignal<string[]>(blocks());
+
+    // Use transition for block updates in streaming mode to avoid blocking UI
+    createEffect(() => {
+        const nextBlocks = blocks();
+        if (mode === "streaming" && !animatePlugin()) {
+            startTransition(() => {
+                setDisplayBlocks(nextBlocks);
+            });
+        } else {
+            setDisplayBlocks(nextBlocks);
+        }
+    });
+
+    // Use displayBlocks for rendering to leverage useTransition
+    const blocksToRender = createMemo(() =>
+        mode === "streaming" ? displayBlocks() : blocks(),
+    );
+
+    // Pre-compute per-block text directions when dir="auto" so detection
+    // runs once per block change rather than on every render pass.
+    const blockDirections = createMemo(() =>
+        localProps.dir === "auto"
+            ? blocksToRender().map(detectTextDirection)
+            : undefined,
+    );
+
+    // Generate stable keys based on index only
+    // Don't use content hash - that causes unmount/remount when content changes
+    // React will handle content updates via props changes and memo comparison
+    // Stable key derived from animated option values. This prevents the
+    // plugin from being recreated when the user passes an inline object
+    // literal (e.g. animated={{ animation: 'fadeIn' }}) whose reference
+    // changes on every parent render.
+    const animatedKey = createMemo(() => {
+        if (localProps.animated === true) {
+            return "true";
+        }
+        if (localProps.animated) {
+            return JSON.stringify(localProps.animated);
+        }
+        return "";
+    });
+
+    const animatePlugin = createMemo(() => {
+        if (!animatedKey()) {
+            return null;
+        }
+        if (animatedKey() === "true") {
+            return createAnimatePlugin();
+        }
+        return createAnimatePlugin(localProps.animated as AnimateOptions);
+    });
+
+    // Combined context value - single object reduces React tree overhead
+    const contextValue = createMemo<StreamdownContextType>(() => ({
+        shikiTheme: localProps.plugins?.code?.getThemes() ?? shikiTheme,
+        controls,
+        isAnimating,
+        lineNumbers,
+        mode,
+        mermaid: localProps.mermaid,
+        linkSafety,
+    }));
+
+    // Stable key derived from translations values so inline objects don't
+    // defeat memoization (same pattern used for `animated` above).
+    const translationsValue = createMemo(() => ({
+        ...defaultTranslations,
+        ...localProps.translations,
+    }));
+
+    // Memoize merged components to avoid recreating on every render
+    const mergedComponents = createMemo(() => {
+        const { inlineCode, ...userComponents } = localProps.components ?? {};
+
+        const merged = {
+            ...defaultComponents,
+            ...userComponents,
+        };
+
+        if (inlineCode) {
+            const BlockCode = merged.code;
+            merged.code = (
+                codeProps: JSX.IntrinsicElements["code"] & ExtraProps,
+            ) => {
+                const isInline = !("data-block" in codeProps);
+                if (isInline) {
+                    return createComponent(inlineCode, codeProps);
+                }
+                return BlockCode
+                    ? createComponent(BlockCode as Component<any>, codeProps)
+                    : null;
+            };
+        }
+
+        return merged;
+    });
+
+    // Merge plugin remark plugins (math, cjk)
+    // Order: CJK before -> default (remarkGfm) -> CJK after -> math
+    const mergedRemarkPlugins = createMemo(() => {
+        let result: Pluggable[] = [];
+        // CJK plugins that must run BEFORE remarkGfm (e.g., remark-cjk-friendly)
+        if (localProps.plugins?.cjk) {
+            result = [...result, ...localProps.plugins.cjk.remarkPluginsBefore];
+        }
+        // Default plugins (includes remarkGfm)
+        result = [...result, ...remarkPlugins];
+        // CJK plugins that must run AFTER remarkGfm (e.g., autolink boundary)
+        if (localProps.plugins?.cjk) {
+            result = [...result, ...localProps.plugins.cjk.remarkPluginsAfter];
+        }
+        // Math plugins
+        if (localProps.plugins?.math) {
+            result = [...result, localProps.plugins.math.remarkPlugin];
+        }
+        return result;
+    });
+
+    const mergedRehypePlugins = createMemo(() => {
+        let result = rehypePlugins;
+
+        // extend sanitization schema with allowedTags. only works with default plugins. if user provides a custom sanitize plugin, they can pass in the custom allowed tags via the plugins object.
+        if (
+            localProps.allowedTags &&
+            Object.keys(localProps.allowedTags).length > 0 &&
+            rehypePlugins === defaultRehypePluginsArray
+        ) {
+            const extendedSchema = {
+                ...defaultSanitizeSchema,
+                tagNames: [
+                    ...(defaultSanitizeSchema.tagNames ?? []),
+                    ...Object.keys(localProps.allowedTags),
+                ],
+                attributes: {
+                    ...defaultSanitizeSchema.attributes,
+                    ...localProps.allowedTags,
+                },
+            };
+
+            result = [
+                defaultRehypePlugins.raw!,
+                [rehypeSanitize, extendedSchema],
+                defaultRehypePlugins.harden!,
+            ];
+        }
+
+        if (
+            localProps.literalTagContent &&
+            localProps.literalTagContent.length > 0
+        ) {
+            result = [
+                ...result,
+                [rehypeLiteralTagContent, localProps.literalTagContent],
+            ];
+        }
+
+        if (localProps.plugins?.math) {
+            result = [...result, localProps.plugins.math.rehypePlugin];
+        }
+
+        if (animatePlugin() && isAnimating) {
+            result = [...result, animatePlugin()!.rehypePlugin];
+        }
+
+        return result;
+    });
+
+    const shouldHideCaret = createMemo(() => {
+        if (!isAnimating || blocksToRender().length === 0) {
+            return false;
+        }
+        const lastBlock = blocksToRender().at(-1) as string;
+        return hasIncompleteCodeFence(lastBlock) || hasTable(lastBlock);
+    });
+
+    const style = createMemo(() =>
+        localProps.caret && isAnimating && !shouldHideCaret()
+            ? ({
+                  "--streamdown-caret": `"${carets[localProps.caret]}"`,
+              } as JSX.CSSProperties)
+            : undefined,
+    );
+
+    // Static mode: simple rendering without streaming features
+    if (mode === "static") {
         return (
             <TranslationsContext.Provider value={translationsValue()}>
                 <PluginContext.Provider value={localProps.plugins ?? null}>
@@ -833,51 +722,24 @@ export const StreamdownSolid = memo(
                                 <div
                                     class={prefixedCn()(
                                         "sd-streamdown-root",
-                                        localProps.caret && !shouldHideCaret()
-                                            ? "sd-streamdown-root--with-caret"
-                                            : null,
                                         localProps.class,
                                     )}
-                                    style={style()}
+                                    dir={
+                                        localProps.dir === "auto"
+                                            ? detectTextDirection(
+                                                  processedChildren(),
+                                              )
+                                            : localProps.dir
+                                    }
                                 >
-                                    {blocksToRender().length === 0 &&
-                                        localProps.caret &&
-                                        isAnimating && <span />}
-                                    {blocksToRender().map((block, index) => {
-                                        const isLastBlock =
-                                            index ===
-                                            blocksToRender().length - 1;
-                                        const isIncomplete =
-                                            isAnimating &&
-                                            isLastBlock &&
-                                            hasIncompleteCodeFence(block);
-                                        return (
-                                            <BlockComponent
-                                                animatePlugin={animatePlugin()}
-                                                components={mergedComponents()}
-                                                content={block}
-                                                dir={
-                                                    blockDirections()?.[
-                                                        index
-                                                    ] ??
-                                                    (localProps.dir !== "auto"
-                                                        ? localProps.dir
-                                                        : undefined)
-                                                }
-                                                index={index}
-                                                isIncomplete={isIncomplete}
-                                                rehypePlugins={mergedRehypePlugins()}
-                                                remarkPlugins={mergedRemarkPlugins()}
-                                                shouldNormalizeHtmlIndentation={
-                                                    shouldNormalizeHtmlIndentation
-                                                }
-                                                shouldParseIncompleteMarkdown={
-                                                    shouldParseIncompleteMarkdown
-                                                }
-                                                {...restProps}
-                                            />
-                                        );
-                                    })}
+                                    <Markdown
+                                        components={mergedComponents()}
+                                        rehypePlugins={mergedRehypePlugins()}
+                                        remarkPlugins={mergedRemarkPlugins()}
+                                        {...restProps}
+                                    >
+                                        {processedChildren()}
+                                    </Markdown>
                                 </div>
                             </PrefixContext.Provider>
                         </IconProvider>
@@ -885,22 +747,65 @@ export const StreamdownSolid = memo(
                 </PluginContext.Provider>
             </TranslationsContext.Provider>
         );
-    },
-    (prevProps: StreamdownProps, nextProps: StreamdownProps) =>
-        prevProps.children === nextProps.children &&
-        prevProps.shikiTheme === nextProps.shikiTheme &&
-        prevProps.isAnimating === nextProps.isAnimating &&
-        prevProps.animated === nextProps.animated &&
-        prevProps.mode === nextProps.mode &&
-        prevProps.plugins === nextProps.plugins &&
-        prevProps.class === nextProps.class &&
-        prevProps.linkSafety === nextProps.linkSafety &&
-        prevProps.lineNumbers === nextProps.lineNumbers &&
-        prevProps.normalizeHtmlIndentation ===
-            nextProps.normalizeHtmlIndentation &&
-        prevProps.literalTagContent === nextProps.literalTagContent &&
-        JSON.stringify(prevProps.translations) ===
-            JSON.stringify(nextProps.translations) &&
-        prevProps.prefix === nextProps.prefix &&
-        prevProps.dir === nextProps.dir,
-);
+    }
+
+    // Streaming mode: parse into blocks with memoization and incomplete markdown handling
+    return (
+        <TranslationsContext.Provider value={translationsValue()}>
+            <PluginContext.Provider value={localProps.plugins ?? null}>
+                <StreamdownContext.Provider value={contextValue()}>
+                    <IconProvider icons={iconOverrides}>
+                        <PrefixContext.Provider value={prefixedCn()}>
+                            <div
+                                class={prefixedCn()(
+                                    "sd-streamdown-root",
+                                    localProps.caret && !shouldHideCaret()
+                                        ? "sd-streamdown-root--with-caret"
+                                        : null,
+                                    localProps.class,
+                                )}
+                                style={style()}
+                            >
+                                {blocksToRender().length === 0 &&
+                                    localProps.caret &&
+                                    isAnimating && <span />}
+                                {blocksToRender().map((block, index) => {
+                                    const isLastBlock =
+                                        index === blocksToRender().length - 1;
+                                    const isIncomplete =
+                                        isAnimating &&
+                                        isLastBlock &&
+                                        hasIncompleteCodeFence(block);
+                                    return (
+                                        <BlockComponent
+                                            animatePlugin={animatePlugin()}
+                                            components={mergedComponents()}
+                                            content={block}
+                                            dir={
+                                                blockDirections()?.[index] ??
+                                                (localProps.dir !== "auto"
+                                                    ? localProps.dir
+                                                    : undefined)
+                                            }
+                                            index={index}
+                                            isIncomplete={isIncomplete}
+                                            rehypePlugins={mergedRehypePlugins()}
+                                            remarkPlugins={mergedRemarkPlugins()}
+                                            shouldNormalizeHtmlIndentation={
+                                                shouldNormalizeHtmlIndentation
+                                            }
+                                            shouldParseIncompleteMarkdown={
+                                                shouldParseIncompleteMarkdown
+                                            }
+                                            {...restProps}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </PrefixContext.Provider>
+                    </IconProvider>
+                </StreamdownContext.Provider>
+            </PluginContext.Provider>
+        </TranslationsContext.Provider>
+    );
+};
