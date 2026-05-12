@@ -3,6 +3,9 @@
 let activeCount = 0;
 
 export const lockBodyScroll = () => {
+    if (typeof document === "undefined") {
+        return;
+    }
     activeCount += 1;
     if (activeCount === 1) {
         document.body.style.overflow = "hidden";
@@ -10,6 +13,9 @@ export const lockBodyScroll = () => {
 };
 
 export const unlockBodyScroll = () => {
+    if (typeof document === "undefined") {
+        return;
+    }
     activeCount = Math.max(0, activeCount - 1);
     if (activeCount === 0) {
         document.body.style.overflow = "";

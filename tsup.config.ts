@@ -10,6 +10,7 @@ const preset_options: preset.PresetOptions = {
             entry: "src/index.tsx",
             // will generate a separate development entry
             dev_entry: true,
+            server_entry: true,
         },
     ],
     // Set to `true` to remove all `console.*` calls and `debugger` statements in prod builds
@@ -31,6 +32,33 @@ export default defineConfig((config) => {
 
     if (!watching && !CI) {
         const package_fields = preset.generatePackageExports(parsed_options);
+        const stripSolidFromServerConditions = (
+            conditions: Record<string, unknown>,
+        ) => {
+            for (const runtime of ["node", "deno", "worker"]) {
+                const value = conditions[runtime];
+                if (!value || typeof value !== "object") {
+                    continue;
+                }
+                const nested = value as Record<string, unknown>;
+                delete nested.solid;
+                delete nested.development;
+            }
+        };
+        const exportsField = package_fields.exports;
+        if (exportsField && typeof exportsField === "object") {
+            if ("node" in exportsField) {
+                stripSolidFromServerConditions(exportsField);
+            } else {
+                for (const value of Object.values(exportsField)) {
+                    if (value && typeof value === "object") {
+                        stripSolidFromServerConditions(
+                            value as Record<string, unknown>,
+                        );
+                    }
+                }
+            }
+        }
 
         console.log(
             `package.json: \n\n${JSON.stringify(package_fields, null, 2)}\n\n`,
@@ -42,7 +70,6 @@ export default defineConfig((config) => {
 
     const tsupOptions = preset.generateTsupOptions(parsed_options);
     const forceBundledDeps = [
-        /.*/,
         "hast-util-to-jsx-runtime",
         "style-to-js",
         "inline-style-parser",

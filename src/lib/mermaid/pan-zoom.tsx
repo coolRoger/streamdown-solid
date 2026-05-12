@@ -131,6 +131,9 @@ export const PanZoom = (props: PanZoomProps) => {
     });
 
     const syncPanListeners = () => {
+        if (typeof document === "undefined") {
+            return;
+        }
         const content = contentRef;
         if (!content) {
             return;
@@ -158,7 +161,9 @@ export const PanZoom = (props: PanZoomProps) => {
     onMount(() => {
         onCleanup(() => {
             syncPanListeners();
-            document.body.style.userSelect = "";
+            if (typeof document !== "undefined") {
+                document.body.style.userSelect = "";
+            }
         });
     });
 

@@ -35,6 +35,8 @@ export const TableFullscreenButton = (props: TableFullscreenButtonProps) => {
     const [isFullscreen, setIsFullscreen] = createSignal(false);
     const { isAnimating } = useContext(StreamdownContext);
     const t = useTranslations();
+    const getPortalMount = () =>
+        typeof document === "undefined" ? undefined : document.body;
 
     const handleOpen = () => {
         setIsFullscreen(true);
@@ -46,6 +48,9 @@ export const TableFullscreenButton = (props: TableFullscreenButtonProps) => {
 
     createEffect(() => {
         if (isFullscreen()) {
+            if (typeof document === "undefined") {
+                return;
+            }
             lockBodyScroll();
 
             const handleEsc = (e: KeyboardEvent) => {
@@ -75,7 +80,7 @@ export const TableFullscreenButton = (props: TableFullscreenButtonProps) => {
             </button>
 
             {isFullscreen() ? (
-                <Portal mount={document.body}>
+                <Portal mount={getPortalMount()}>
                     <div
                         aria-label={t.viewFullscreen}
                         aria-modal="true"

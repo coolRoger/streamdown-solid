@@ -31,6 +31,9 @@ export const save = (
     content: string | Blob,
     mimeType: string,
 ) => {
+    if (typeof document === "undefined") {
+        return;
+    }
     // Prepend UTF-8 BOM for CSV so Excel on Windows correctly detects the encoding.
     // Without it, Excel falls back to the system ANSI codepage and corrupts non-ASCII text.
     const bom =

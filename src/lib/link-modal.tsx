@@ -39,6 +39,9 @@ export const LinkSafetyModal = (props: LinkSafetyModalProps) => {
 
     createEffect(() => {
         if (localProps.isOpen) {
+            if (typeof document === "undefined") {
+                return;
+            }
             lockBodyScroll();
 
             const handleEsc = (e: KeyboardEvent) => {

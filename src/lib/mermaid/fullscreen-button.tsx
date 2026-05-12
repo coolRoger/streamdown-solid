@@ -41,6 +41,8 @@ export const MermaidFullscreenButton = (
     const { isAnimating, controls: controlsConfig } =
         useContext(StreamdownContext);
     const t = useTranslations();
+    const getPortalMount = () =>
+        typeof document === "undefined" ? undefined : document.body;
     const showPanZoomControls = (() => {
         if (typeof controlsConfig === "boolean") {
             return controlsConfig;
@@ -62,6 +64,9 @@ export const MermaidFullscreenButton = (
     // Manage scroll lock and keyboard events
     createEffect(() => {
         if (isFullscreen()) {
+            if (typeof document === "undefined") {
+                return;
+            }
             lockBodyScroll();
 
             const handleEsc = (e: KeyboardEvent) => {
@@ -101,7 +106,7 @@ export const MermaidFullscreenButton = (
             </button>
 
             {isFullscreen() ? (
-                <Portal mount={document.body}>
+                <Portal mount={getPortalMount()}>
                     {/* biome-ignore lint/a11y/useSemanticElements: "div is used as a backdrop overlay, not a button" */}
                     <div
                         class={cn("sd-mermaid-fullscreen-overlay")}

@@ -19,11 +19,47 @@
     "private": false,
     "sideEffects": false,
     "type": "module",
-    "main": "./dist/index.js",
-    "module": "./dist/index.js",
+    "main": "./dist/server.js",
+    "module": "./dist/server.js",
     "types": "./dist/index.d.ts",
-    "browser": {},
+    "browser": {
+        "./dist/server.js": "./dist/index.js"
+    },
     "exports": {
+        "worker": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/server.js"
+            }
+        },
+        "browser": {
+            "solid": {
+                "development": "./dist/dev.jsx",
+                "import": "./dist/index.jsx"
+            },
+            "development": {
+                "import": {
+                    "types": "./dist/index.d.ts",
+                    "default": "./dist/dev.js"
+                }
+            },
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            }
+        },
+        "deno": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/server.js"
+            }
+        },
+        "node": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/server.js"
+            }
+        },
         "solid": {
             "development": "./dist/dev.jsx",
             "import": "./dist/index.jsx"
@@ -64,7 +100,7 @@
         "esbuild": "^0.21.3",
         "esbuild-plugin-solid": "^0.6.0",
         "jsdom": "^24.0.0",
-        "solid-js": "^1.8.17",
+        "solid-js": "^1.9.12",
         "tsup": "^8.0.2",
         "tsup-preset-solid": "^2.2.0",
         "typescript": "^5.4.5",
