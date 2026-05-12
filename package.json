@@ -81,9 +81,11 @@
         "pnpm": ">=9.0.0"
     },
     "dependencies": {
+        "@kodehort/ai-sdk-solid": "^1.0.4",
         "@types/hast": "^3.0.4",
         "@types/mdast": "^4.0.4",
         "@types/unist": "^3.0.3",
+        "ai": "^6.0.177",
         "hast-util-to-jsx-runtime": "^2.3.6",
         "html-url-attributes": "^3.0.1",
         "marked": "^18.0.3",
