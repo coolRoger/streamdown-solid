@@ -70,9 +70,21 @@ export default defineConfig((config) => {
 
     const tsupOptions = preset.generateTsupOptions(parsed_options);
     const forceBundledDeps = [
+        "debug",
         "hast-util-to-jsx-runtime",
+        "html-url-attributes",
+        "marked",
+        "rehype-harden",
+        "rehype-raw",
+        "rehype-sanitize",
+        "remark-gfm",
+        "remark-parse",
+        "remark-rehype",
         "style-to-js",
+        "unified",
         "inline-style-parser",
+        "unist-util-visit",
+        "unist-util-visit-parents",
     ];
     const forceExternalDeps = [
         "solid-js",
