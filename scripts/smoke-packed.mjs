@@ -91,6 +91,7 @@ export default defineConfig({
 
     const mainTsx = `import { render } from "solid-js/web";
 import { StreamdownSolid } from "streamdown-solidjs";
+import "streamdown-solidjs/styles.css";
 
 const App = () => (
     <StreamdownSolid isAnimating animated>

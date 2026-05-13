@@ -59,6 +59,25 @@ export default defineConfig((config) => {
                 }
             }
         }
+        if (exportsField && typeof exportsField === "object") {
+            const exportObj = exportsField as Record<string, unknown>;
+            const needsSubpathWrapper =
+                !("." in exportObj) &&
+                ("import" in exportObj ||
+                    "require" in exportObj ||
+                    "solid" in exportObj ||
+                    "node" in exportObj);
+
+            package_fields.exports = needsSubpathWrapper
+                ? {
+                      ".": exportObj,
+                      "./styles.css": "./dist/index.css",
+                  }
+                : {
+                      ...exportObj,
+                      "./styles.css": "./dist/index.css",
+                  };
+        }
 
         console.log(
             `package.json: \n\n${JSON.stringify(package_fields, null, 2)}\n\n`,
